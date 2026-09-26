@@ -26,6 +26,7 @@ interface NavbarProps {
   onOpenWatchlist: () => void;
   onOpenEmergency: () => void;
   onOpenAiRoutePlanner?: () => void;
+  onOpenFahsaiChat?: () => void;
   soundEnabled: boolean;
   onToggleSound: () => void;
   notificationPermission: NotificationPermission;
@@ -44,6 +45,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenWatchlist,
   onOpenEmergency,
   onOpenAiRoutePlanner,
+  onOpenFahsaiChat,
   soundEnabled,
   onToggleSound,
   notificationPermission,
@@ -312,6 +314,18 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
           )}
 
+          {/* Fahsai AI Chatbot Trigger */}
+          {onOpenFahsaiChat && (
+            <button
+              onClick={onOpenFahsaiChat}
+              title="คุยกับหนูน้อยฟ้าใสพยากรณ์ (AI วิเคราะห์สภาพอากาศและน้ำท่วมขัง)"
+              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg sm:rounded-xl bg-gradient-to-r from-pink-600 via-rose-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white text-[11px] sm:text-xs font-bold shadow-md sm:shadow-lg shadow-pink-600/30 transition-all shrink-0 active:scale-95 border border-pink-400/40"
+            >
+              <span>👧</span>
+              <span className="hidden sm:inline">หนูน้อยฟ้าใส</span>
+            </button>
+          )}
+
           {/* Emergency Alert Bulletin Trigger */}
           <button
             onClick={onOpenAlerts}
@@ -439,6 +453,17 @@ export const Navbar: React.FC<NavbarProps> = ({
             >
               <Sparkles className="w-3.5 h-3.5 text-cyan-200 animate-pulse" />
               <span>AI</span>
+            </button>
+          )}
+
+          {/* Mobile Fahsai Chatbot */}
+          {onOpenFahsaiChat && (
+            <button
+              onClick={onOpenFahsaiChat}
+              title="คุยกับหนูน้อยฟ้าใสพยากรณ์"
+              className="flex items-center justify-center w-8 h-8 rounded-xl bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-500 hover:to-rose-500 border border-pink-400/40 text-white font-bold text-xs shadow-sm shrink-0 active:scale-95"
+            >
+              <span>👧</span>
             </button>
           )}
 

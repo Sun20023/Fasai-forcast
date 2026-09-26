@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { WaterStation, DamInfo, RadarData, FloodAlert, FloodZone, FloodedRoad, AiSafeRouteOption } from '../types/flood';
 import { buildSingleRoadDetourUrls } from '../services/aiFloodRouter';
+import { FeatureViewMode, FeatureModeSwitcher } from './FeatureModeSwitcher';
 
 // Fix Leaflet default marker icon asset paths safeguard
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -75,6 +76,8 @@ interface FloodMapProps {
   onMapClickCoordinates: (coords: { lat: number; lng: number }) => void;
   centerCoords: { lat: number; lng: number; zoom?: number } | null;
   tempPinCoords: { lat: number; lng: number } | null;
+  featureMode?: FeatureViewMode;
+  onSelectFeatureMode?: (mode: FeatureViewMode) => void;
 }
 
 export const FloodMap: React.FC<FloodMapProps> = ({
@@ -99,7 +102,9 @@ export const FloodMap: React.FC<FloodMapProps> = ({
   onSelectDam,
   onMapClickCoordinates,
   centerCoords,
-  tempPinCoords
+  tempPinCoords,
+  featureMode,
+  onSelectFeatureMode
 }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
@@ -116,6 +121,37 @@ export const FloodMap: React.FC<FloodMapProps> = ({
   const [showRiskZones, setShowRiskZones] = useState(true);
   const [showFloodedRoads, setShowFloodedRoads] = useState(true);
   const [showLayerMenu, setShowLayerMenu] = useState(false);
+
+  // Sync individual layer visibility when featureMode switches
+  useEffect(() => {
+    if (!featureMode) return;
+    if (featureMode === 'roads') {
+      setShowFloodedRoads(true);
+      setShowStations(false);
+      setShowDams(false);
+      setShowRiskZones(false);
+    } else if (featureMode === 'radar') {
+      setShowFloodedRoads(false);
+      setShowStations(false);
+      setShowDams(false);
+      setShowRiskZones(false);
+    } else if (featureMode === 'stations') {
+      setShowFloodedRoads(false);
+      setShowStations(true);
+      setShowDams(true);
+      setShowRiskZones(false);
+    } else if (featureMode === 'zones') {
+      setShowFloodedRoads(false);
+      setShowStations(false);
+      setShowDams(false);
+      setShowRiskZones(true);
+    } else if (featureMode === 'all') {
+      setShowFloodedRoads(true);
+      setShowStations(true);
+      setShowDams(true);
+      setShowRiskZones(true);
+    }
+  }, [featureMode]);
 
   // 1. Initialize Map Safely
   useEffect(() => {
@@ -1029,14 +1065,27 @@ export const FloodMap: React.FC<FloodMapProps> = ({
 
       </div>
 
+      {/* Top Floating Feature / Layer Mode Selector (Clean Viewport) */}
+      {onSelectFeatureMode && featureMode && (
+        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-[1000] max-w-[95vw]">
+          <FeatureModeSwitcher
+            currentMode={featureMode}
+            onSelectMode={onSelectFeatureMode}
+            roadCount={floodedRoads.length}
+            stationCount={stations.length}
+            zoneCount={floodZones.length}
+          />
+        </div>
+      )}
+
       {/* Map Hint Tag */}
-      <div className="absolute top-4 left-4 z-[1000] hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl glass-panel text-slate-200 text-xs border border-slate-700/70 shadow-lg pointer-events-none">
+      <div className="absolute top-4 left-4 z-[990] hidden xl:flex items-center gap-2 px-3 py-1.5 rounded-xl glass-panel text-slate-200 text-xs border border-slate-700/70 shadow-lg pointer-events-none">
         <MapPin className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
         <span>คลิกบนแผนที่หรือโซนสี เพื่อวิเคราะห์สภาพอากาศ & เสี่ยงน้ำท่วมสด</span>
       </div>
 
       {/* Real-time BMA DDS Sensor Feed Status Dock */}
-      {floodedRoads && floodedRoads.length > 0 && (
+      {showFloodedRoads && floodedRoads && floodedRoads.length > 0 && (
         <div className="absolute bottom-4 left-4 z-[990] hidden md:flex items-center gap-2.5 px-3 py-2 rounded-2xl glass-panel text-slate-100 text-xs border border-slate-700/80 shadow-2xl backdrop-blur-xl">
           <span className="relative flex h-2.5 w-2.5">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>

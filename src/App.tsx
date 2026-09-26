@@ -8,6 +8,8 @@ import { AlertsModal } from './components/AlertsModal';
 import { WatchlistModal } from './components/WatchlistModal';
 import { EmergencyModal } from './components/EmergencyModal';
 import { AiRoutePlannerModal } from './components/AiRoutePlannerModal';
+import { FeatureViewMode } from './components/FeatureModeSwitcher';
+import { FahsaiChatbot } from './components/FahsaiChatbot';
 
 import { ZoneLegend } from './components/ZoneLegend';
 import { 
@@ -59,9 +61,22 @@ export const App: React.FC = () => {
   const [radarData, setRadarData] = useState<RadarData | null>(null);
   const [currentRadarFrameIndex, setCurrentRadarFrameIndex] = useState(0);
   const [isRadarPlaying, setIsRadarPlaying] = useState(false);
-  const [isRadarVisible, setIsRadarVisible] = useState(true);
+  const [isRadarVisible, setIsRadarVisible] = useState(false);
   const [radarOpacity, setRadarOpacity] = useState(0.75);
   const [activeZoneFilter, setActiveZoneFilter] = useState<'all' | 'red' | 'orange' | 'yellow' | 'green'>('all');
+
+  // Feature View Mode (Clean Viewport Switcher)
+  const [featureMode, setFeatureMode] = useState<FeatureViewMode>('roads');
+  const [isFahsaiChatOpen, setIsFahsaiChatOpen] = useState(false);
+
+  const handleSelectFeatureMode = (mode: FeatureViewMode) => {
+    setFeatureMode(mode);
+    if (mode === 'radar' || mode === 'all') {
+      setIsRadarVisible(true);
+    } else {
+      setIsRadarVisible(false);
+    }
+  };
 
   // Selection & Deep Dive States
   const [selectedStation, setSelectedStation] = useState<WaterStation | null>(null);
@@ -367,6 +382,7 @@ export const App: React.FC = () => {
         onOpenWatchlist={() => setIsWatchlistModalOpen(true)}
         onOpenEmergency={() => setIsEmergencyModalOpen(true)}
         onOpenAiRoutePlanner={() => setIsAiRouteModalOpen(true)}
+        onOpenFahsaiChat={() => setIsFahsaiChatOpen(true)}
         soundEnabled={soundEnabled}
         onToggleSound={handleToggleSound}
         notificationPermission={notificationPermission}
@@ -393,7 +409,7 @@ export const App: React.FC = () => {
       {/* 3. Main Map Viewport */}
       <main className="relative flex-1 w-full min-h-0 overflow-hidden">
         
-        {/* Leaflet Map */}
+        {/* Leaflet Map with Feature View Switcher */}
         <FloodMap
           stations={stations}
           dams={dams}
@@ -417,28 +433,34 @@ export const App: React.FC = () => {
           activeAiRoute={activeAiRoute}
           onClearAiRoute={() => setActiveAiRoute(null)}
           onOpenAiRoutePlanner={() => setIsAiRouteModalOpen(true)}
+          featureMode={featureMode}
+          onSelectFeatureMode={handleSelectFeatureMode}
         />
 
-        {/* Floating Color Risk Zone Legend & Filter */}
-        <ZoneLegend
-          zones={FLOOD_COLOR_ZONES}
-          onSelectZone={handleSelectZone}
-          activeFilter={activeZoneFilter}
-          onChangeFilter={setActiveZoneFilter}
-        />
+        {/* Floating Color Risk Zone Legend & Filter (Visible in 'zones' or 'all' mode) */}
+        {(featureMode === 'zones' || featureMode === 'all') && (
+          <ZoneLegend
+            zones={FLOOD_COLOR_ZONES}
+            onSelectZone={handleSelectZone}
+            activeFilter={activeZoneFilter}
+            onChangeFilter={setActiveZoneFilter}
+          />
+        )}
 
-        {/* Floating RainViewer Radar Dock */}
-        <RadarControls
-          radarData={radarData}
-          currentFrameIndex={currentRadarFrameIndex}
-          isPlaying={isRadarPlaying}
-          onTogglePlay={() => setIsRadarPlaying(!isRadarPlaying)}
-          onSelectFrame={(idx) => setCurrentRadarFrameIndex(idx)}
-          opacity={radarOpacity}
-          onChangeOpacity={(val) => setRadarOpacity(val)}
-          isRadarVisible={isRadarVisible}
-          onToggleRadarVisible={() => setIsRadarVisible(!isRadarVisible)}
-        />
+        {/* Floating RainViewer Radar Dock (Visible in 'radar' or 'all' mode) */}
+        {(featureMode === 'radar' || featureMode === 'all') && isRadarVisible && (
+          <RadarControls
+            radarData={radarData}
+            currentFrameIndex={currentRadarFrameIndex}
+            isPlaying={isRadarPlaying}
+            onTogglePlay={() => setIsRadarPlaying(!isRadarPlaying)}
+            onSelectFrame={(idx) => setCurrentRadarFrameIndex(idx)}
+            opacity={radarOpacity}
+            onChangeOpacity={(val) => setRadarOpacity(val)}
+            isRadarVisible={isRadarVisible}
+            onToggleRadarVisible={() => setIsRadarVisible(!isRadarVisible)}
+          />
+        )}
 
         {/* Deep Dive Sidebar */}
         <DetailSidebar
@@ -539,6 +561,28 @@ export const App: React.FC = () => {
             });
           }
         }}
+      />
+
+      {/* 6. AI Hydrologist & Weather Chatbot: หนูน้อยฟ้าใสพยากรณ์ */}
+      <FahsaiChatbot
+        floodedRoads={floodedRoads}
+        currentLocation={
+          customLocation 
+            ? { lat: customLocation.lat, lng: customLocation.lng, name: customLocation.name } 
+            : centerCoords 
+            ? { lat: centerCoords.lat, lng: centerCoords.lng, name: 'พิกัดที่เลือก' } 
+            : null
+        }
+        weather={selectedWeather}
+        stations={stations}
+        dams={dams}
+        alerts={alerts}
+        onOpenAiRoutePlanner={() => setIsAiRouteModalOpen(true)}
+        onZoomToLocation={(coords) => {
+          setCenterCoords({ lat: coords.lat, lng: coords.lng, zoom: coords.zoom || 14 });
+        }}
+        isOpen={isFahsaiChatOpen}
+        onToggleOpen={setIsFahsaiChatOpen}
       />
 
     </div>
