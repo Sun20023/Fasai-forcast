@@ -26,7 +26,7 @@ import {
   getStoredGeminiApiKey,
   setStoredGeminiApiKey
 } from '../services/fahsaiAiService';
-import { FloodedRoad, WeatherCondition, WaterStation, DamInfo, FloodAlert } from '../types/flood';
+import { FloodedRoad, WeatherCondition, WaterStation, DamInfo, FloodAlert, ExpandedTelemetryData } from '../types/flood';
 
 interface FahsaiChatbotProps {
   floodedRoads: FloodedRoad[];
@@ -35,6 +35,7 @@ interface FahsaiChatbotProps {
   stations: WaterStation[];
   dams: DamInfo[];
   alerts: FloodAlert[];
+  telemetry?: ExpandedTelemetryData | null;
   onOpenAiRoutePlanner?: () => void;
   onZoomToLocation?: (coords: { lat: number; lng: number; zoom?: number }) => void;
   isOpen?: boolean;
@@ -48,6 +49,7 @@ export const FahsaiChatbot: React.FC<FahsaiChatbotProps> = ({
   stations,
   dams,
   alerts,
+  telemetry,
   onOpenAiRoutePlanner,
   onZoomToLocation,
   isOpen: controlledIsOpen,
@@ -116,7 +118,8 @@ export const FahsaiChatbot: React.FC<FahsaiChatbotProps> = ({
       floodedRoads,
       stations,
       dams,
-      alerts
+      alerts,
+      telemetry
     };
 
     try {
@@ -269,6 +272,35 @@ export const FahsaiChatbot: React.FC<FahsaiChatbotProps> = ({
               </button>
             </div>
           </div>
+
+          {/* Live Multi-source Telemetry Status Bar */}
+          {!isMinimized && (
+            <div className="bg-slate-900/90 border-b border-pink-500/20 px-3 py-1.5 flex items-center justify-between text-[10px] text-slate-300">
+              <div className="flex items-center gap-1.5 overflow-hidden">
+                <span className="flex h-2 w-2 relative shrink-0">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-500"></span>
+                </span>
+                <span className="text-cyan-300 font-semibold truncate shrink-0">
+                  8 แหล่ง API:
+                </span>
+                {telemetry ? (
+                  <span className="text-slate-300 truncate text-[10px]">
+                    ดินอิ่มตัว <strong className="text-white">{telemetry.soilSaturationPercent}%</strong> • ทะเลหนุน <strong className="text-white">+{telemetry.marineTideHeightM.toFixed(2)}m</strong> • C.13 <strong className="text-white">{telemetry.chaoPhrayaC13DischargeM3s}</strong> ลบ.ม./วิ
+                  </span>
+                ) : (
+                  <span className="text-slate-400">กำลังเชื่อมต่อโครงข่ายตรวจวัดสด...</span>
+                )}
+              </div>
+              <button
+                onClick={() => handleSendMessage('แหล่งข้อมูล')}
+                title="คลิกเพื่อดู 8 แหล่ง API และเซนเซอร์ตรวจวัด"
+                className="shrink-0 text-pink-400 hover:text-pink-300 font-medium ml-2 text-[9px] hover:underline"
+              >
+                ดู 8 แหล่ง API
+              </button>
+            </div>
+          )}
 
           {/* Optional Gemini API Key Modal */}
           {showKeyModal && (

@@ -17,9 +17,16 @@ import {
   ShieldAlert,
   Compass,
   ArrowRight,
-  Waves
+  Waves,
+  Activity,
+  Layers,
+  Gauge,
+  Radio,
+  Database,
+  Cpu,
+  Sparkles
 } from 'lucide-react';
-import { WaterStation, DamInfo, WeatherCondition, RiverDischargeForecast } from '../types/flood';
+import { WaterStation, DamInfo, WeatherCondition, RiverDischargeForecast, ExpandedTelemetryData } from '../types/flood';
 import { calculateLocationThreat } from '../services/weatherApi';
 
 interface DetailSidebarProps {
@@ -32,6 +39,7 @@ interface DetailSidebarProps {
   } | null;
   weather: WeatherCondition | null;
   riverDischarge: RiverDischargeForecast | null;
+  telemetry?: ExpandedTelemetryData | null;
   isLoadingWeather: boolean;
   onClose: () => void;
   onAddToWatchlist: (item: { label: string; province: string; lat: number; lng: number }) => void;
@@ -44,6 +52,7 @@ export const DetailSidebar: React.FC<DetailSidebarProps> = ({
   customLocation,
   weather,
   riverDischarge,
+  telemetry,
   isLoadingWeather,
   onClose,
   onAddToWatchlist,
@@ -375,6 +384,169 @@ export const DetailSidebar: React.FC<DetailSidebarProps> = ({
             </div>
           )}
         </div>
+
+        {/* Expanded 8-Source Telemetry & AI Hydrology Engine Card */}
+        {telemetry && (
+          <div className="glass-card rounded-2xl p-4 border border-cyan-500/40 bg-gradient-to-br from-slate-900/90 via-slate-900/60 to-cyan-950/30 space-y-3.5 shadow-lg">
+            <div className="flex items-center justify-between border-b border-cyan-500/20 pb-2.5">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 rounded-lg bg-cyan-500/20 text-cyan-300">
+                  <Activity className="w-4 h-4 animate-pulse" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-xs uppercase tracking-wider text-cyan-200 flex items-center gap-1.5">
+                    โครงข่ายตรวจวัด 8 แหล่ง API สด
+                  </h4>
+                  <p className="text-[10px] text-slate-400">
+                    ข้อมูลดิบส่งตรงเข้า AI หนูน้อยฟ้าใส & แบบจำลองชลศาสตร์
+                  </p>
+                </div>
+              </div>
+              <span className="px-2 py-0.5 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-[9px] font-semibold text-cyan-300 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+                ออนไลน์
+              </span>
+            </div>
+
+            {/* 4 Multi-Source Parameters Grid */}
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              {/* 1. Soil Saturation */}
+              <div className="bg-slate-800/80 p-2.5 rounded-xl border border-slate-700/60">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[10px] text-slate-400 flex items-center gap-1">
+                    <Layers className="w-3 h-3 text-amber-400" />
+                    ความอิ่มตัวผิวดิน
+                  </span>
+                  <span className={`text-[10px] font-bold ${
+                    telemetry.soilSaturationPercent >= 80 ? 'text-red-400' :
+                    telemetry.soilSaturationPercent >= 60 ? 'text-amber-400' : 'text-emerald-400'
+                  }`}>
+                    {telemetry.soilSaturationPercent}%
+                  </span>
+                </div>
+                <div className="w-full bg-slate-700 rounded-full h-1.5 mb-1 overflow-hidden">
+                  <div 
+                    className={`h-full rounded-full transition-all ${
+                      telemetry.soilSaturationPercent >= 80 ? 'bg-red-500' :
+                      telemetry.soilSaturationPercent >= 60 ? 'bg-amber-400' : 'bg-emerald-400'
+                    }`}
+                    style={{ width: `${Math.min(telemetry.soilSaturationPercent, 100)}%` }}
+                  />
+                </div>
+                <p className="text-[9px] text-slate-400 leading-tight">
+                  {telemetry.soilSaturationPercent >= 80 
+                    ? '⚠️ ดินอุ้มน้ำเต็มพิกัด ฝนตกจะกลายเป็นน้ำหลาก 100%' 
+                    : 'ดินยังซึมซับน้ำได้ อัตราการระบายตามธรรมชาติ'}
+                </p>
+              </div>
+
+              {/* 2. Gulf Marine High Tide */}
+              <div className="bg-slate-800/80 p-2.5 rounded-xl border border-slate-700/60">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[10px] text-slate-400 flex items-center gap-1">
+                    <Waves className="w-3 h-3 text-cyan-400" />
+                    น้ำทะเลหนุนอ่าวไทย
+                  </span>
+                  <span className={`text-[10px] font-bold ${telemetry.isHighTideAlert ? 'text-amber-400' : 'text-cyan-300'}`}>
+                    +{telemetry.marineTideHeightM.toFixed(2)} ม.
+                  </span>
+                </div>
+                <div className="w-full bg-slate-700 rounded-full h-1.5 mb-1 overflow-hidden">
+                  <div 
+                    className={`h-full rounded-full transition-all ${
+                      telemetry.marineTideHeightM >= 1.7 ? 'bg-red-500' :
+                      telemetry.marineTideHeightM >= 1.5 ? 'bg-amber-400' : 'bg-cyan-400'
+                    }`}
+                    style={{ width: `${Math.min((telemetry.marineTideHeightM / 2.2) * 100, 100)}%` }}
+                  />
+                </div>
+                <p className="text-[9px] text-slate-400 leading-tight">
+                  {telemetry.highTideWindow}
+                </p>
+              </div>
+
+              {/* 3. Chao Phraya C.13 Barrage Flow */}
+              <div className="bg-slate-800/80 p-2.5 rounded-xl border border-slate-700/60">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[10px] text-slate-400 flex items-center gap-1">
+                    <Gauge className="w-3 h-3 text-indigo-400" />
+                    ระบายเขื่อน C.13
+                  </span>
+                  <span className={`text-[10px] font-bold ${telemetry.chaoPhrayaC13DischargeM3s >= 2000 ? 'text-red-400' : 'text-slate-100'}`}>
+                    {telemetry.chaoPhrayaC13DischargeM3s.toLocaleString()}
+                  </span>
+                </div>
+                <span className="text-[9px] text-slate-400 block mb-0.5">ลบ.ม./วินาที (ชัยนาท)</span>
+                <p className="text-[9px] text-slate-400 leading-tight">
+                  {telemetry.chaoPhrayaC13DischargeM3s >= 2000 ? '🚨 เสี่ยงน้ำล้นตลิ่งชุมชนนอกคัน' : '✅ ยังอยู่ในเกณฑ์ควบคุมของ กรมชลฯ'}
+                </p>
+              </div>
+
+              {/* 4. Atmospheric Surface Pressure */}
+              <div className="bg-slate-800/80 p-2.5 rounded-xl border border-slate-700/60">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[10px] text-slate-400 flex items-center gap-1">
+                    <Radio className="w-3 h-3 text-rose-400" />
+                    ความกดอากาศ
+                  </span>
+                  <span className={`text-[10px] font-bold ${telemetry.surfacePressureHpa < 1006 ? 'text-red-400' : 'text-slate-100'}`}>
+                    {telemetry.surfacePressureHpa.toFixed(1)} hPa
+                  </span>
+                </div>
+                <span className="text-[9px] text-slate-400 block mb-0.5">จุดน้ำค้าง {telemetry.dewPointC.toFixed(1)}°C</span>
+                <p className="text-[9px] text-slate-400 leading-tight">
+                  {telemetry.surfacePressureHpa < 1006 ? '⚠️ ร่องมรสุมกำลังแรงพาดผ่าน' : 'มวลอากาศมีเสถียรภาพปกติ'}
+                </p>
+              </div>
+            </div>
+
+            {/* AI Flash Flood Risk Index Indicator */}
+            <div className="bg-slate-800/60 p-2.5 rounded-xl border border-slate-700/50 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-pink-400 shrink-0" />
+                <div>
+                  <span className="text-[10px] font-bold text-slate-200 block">
+                    ดัชนีเสี่ยงน้ำท่วมฉับพลันสังเคราะห์ (Composite AI Risk):
+                  </span>
+                  <span className="text-[9px] text-slate-400">
+                    คำนวณร่วม ดินอิ่มตัว + ฝนดาวเทียม + ทะเลหนุน + อัตราน้ำเหนือ
+                  </span>
+                </div>
+              </div>
+              <div className="text-right shrink-0">
+                <span className={`text-sm font-black ${
+                  telemetry.flashFloodRiskScore >= 70 ? 'text-red-400' :
+                  telemetry.flashFloodRiskScore >= 40 ? 'text-amber-400' : 'text-emerald-400'
+                }`}>
+                  {telemetry.flashFloodRiskScore}/100
+                </span>
+                <span className="block text-[8px] uppercase font-bold text-slate-400">
+                  {telemetry.aiHydroRiskLevel}
+                </span>
+              </div>
+            </div>
+
+            {/* Active Sources Badge List */}
+            <div>
+              <p className="text-[10px] font-semibold text-slate-300 mb-1.5 flex items-center gap-1">
+                <Database className="w-3 h-3 text-cyan-400" />
+                <span>แหล่งข้อมูลและเครือข่ายเซนเซอร์ที่ใช้งานอยู่:</span>
+              </p>
+              <div className="flex flex-wrap gap-1">
+                {telemetry.sources.map((src) => (
+                  <span
+                    key={src.id}
+                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-slate-800/90 border border-slate-700 text-[9px] text-slate-300"
+                    title={`${src.name} (${src.provider}) - ${src.dataPoints}`}
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                    <span className="font-medium truncate max-w-[150px]">{src.name}</span>
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* 7-Day River Discharge (Open-Meteo Flood API) */}
         {riverDischarge && riverDischarge.discharge.length > 0 && (

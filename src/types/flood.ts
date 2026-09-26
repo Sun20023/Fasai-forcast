@@ -188,3 +188,45 @@ export interface AiRoutePlanResult {
     safestTravelAdvice: string;
   };
 }
+
+export interface TelemetrySource {
+  id: string;
+  name: string;
+  provider: string;
+  category: 'weather' | 'hydrology' | 'soil' | 'marine' | 'radar' | 'roads' | 'ai';
+  status: 'active' | 'degraded' | 'cached';
+  latencyMs: number;
+  dataPoints: string;
+}
+
+export interface ExpandedTelemetryData {
+  // Soil & Moisture (Infiltration capability)
+  soilMoisture0to1cm: number; // m3/m3
+  soilMoisture1to3cm: number;
+  soilMoisture3to9cm: number;
+  soilSaturationPercent: number; // 0 - 100%
+  soilTemperature0cm: number;
+
+  // Atmospheric & Stability
+  surfacePressureHpa: number; // ความกดอากาศ hPa (ปกติ ~1013 hPa, < 1006 hPa = depression/storm trough)
+  dewPointC: number;
+  evapotranspirationMm: number;
+  cloudCoverPercent: number;
+  uvIndex: number;
+
+  // Marine & Gulf of Thailand High Tide Surge
+  marineTideHeightM: number; // ระดับน้ำทะเลหนุน (เมตร รทก.)
+  highTideWindow: string; // เช่น "17:30 - 21:00 น. (น้ำทะเลหนุนสูงสุด)"
+  isHighTideAlert: boolean;
+
+  // Hydrological Basin Inflow & Runoff
+  chaoPhrayaC13DischargeM3s: number; // การระบายน้ำเขื่อนเจ้าพระยา C.13 ชัยนาท (ลบ.ม./วินาที)
+  urbanRunoffCoefficient: number; // 0.85 - 0.95
+  flashFloodRiskScore: number; // 0 - 100
+  aiHydroRiskLevel: 'low' | 'moderate' | 'high' | 'critical';
+
+  // Multi-source telemetry status
+  sources: TelemetrySource[];
+  lastSynced: string;
+}
+

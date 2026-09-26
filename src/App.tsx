@@ -21,7 +21,8 @@ import {
   RiverDischargeForecast, 
   WatchedArea,
   FloodZone,
-  AiSafeRouteOption
+  AiSafeRouteOption,
+  ExpandedTelemetryData
 } from './types/flood';
 import { 
   INITIAL_STATIONS, 
@@ -37,6 +38,7 @@ import {
   fetchLiveWeather, 
   fetchRiverDischarge, 
   fetchRainViewerRadar, 
+  fetchExpandedTelemetry,
   calculateLocationThreat 
 } from './services/weatherApi';
 import { 
@@ -84,6 +86,7 @@ export const App: React.FC = () => {
   const [customLocation, setCustomLocation] = useState<{ lat: number; lng: number; name?: string } | null>(null);
   const [selectedWeather, setSelectedWeather] = useState<WeatherCondition | null>(null);
   const [selectedDischarge, setSelectedDischarge] = useState<RiverDischargeForecast | null>(null);
+  const [expandedTelemetry, setExpandedTelemetry] = useState<ExpandedTelemetryData | null>(null);
   const [isLoadingWeather, setIsLoadingWeather] = useState(false);
 
   // Map Navigation States
@@ -165,16 +168,18 @@ export const App: React.FC = () => {
     return () => clearInterval(interval);
   }, [isRadarPlaying, radarData]);
 
-  // Fetch Live Weather & Discharge for a Coordinate
+  // Fetch Live Weather, River Discharge & 8-Source Telemetry for a Coordinate
   const fetchDeepTelemetry = useCallback(async (lat: number, lng: number) => {
     setIsLoadingWeather(true);
     try {
-      const [weather, discharge] = await Promise.all([
+      const [weather, discharge, telemetry] = await Promise.all([
         fetchLiveWeather(lat, lng),
-        fetchRiverDischarge(lat, lng)
+        fetchRiverDischarge(lat, lng),
+        fetchExpandedTelemetry(lat, lng)
       ]);
       setSelectedWeather(weather);
       setSelectedDischarge(discharge);
+      setExpandedTelemetry(telemetry);
 
       // Check if location has critical weather/storm threat and notify
       const threat = calculateLocationThreat(weather, discharge);
@@ -191,6 +196,11 @@ export const App: React.FC = () => {
       setIsLoadingWeather(false);
     }
   }, [soundEnabled]);
+
+  // Initial Telemetry load for default central area
+  useEffect(() => {
+    fetchDeepTelemetry(13.7563, 100.5018);
+  }, [fetchDeepTelemetry]);
 
   // Handle Station Selection
   const handleSelectStation = useCallback((st: WaterStation) => {
@@ -481,6 +491,7 @@ export const App: React.FC = () => {
           customLocation={customLocation}
           weather={selectedWeather}
           riverDischarge={selectedDischarge}
+          telemetry={expandedTelemetry}
           isLoadingWeather={isLoadingWeather}
           onClose={() => {
             setSelectedStation(null);
@@ -597,6 +608,7 @@ export const App: React.FC = () => {
         stations={stations}
         dams={dams}
         alerts={alerts}
+        telemetry={expandedTelemetry}
         onOpenAiRoutePlanner={() => setIsAiRouteModalOpen(true)}
         onZoomToLocation={(coords) => {
           setCenterCoords({ lat: coords.lat, lng: coords.lng, zoom: coords.zoom || 14 });
