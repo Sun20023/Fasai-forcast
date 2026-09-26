@@ -127,16 +127,16 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           <div>
             <div className="flex items-center gap-2">
-              <span className="font-bold text-lg tracking-tight bg-gradient-to-r from-white via-slate-100 to-cyan-400 bg-clip-text text-transparent">
-                ThaiFlood Live
+              <span className="font-bold text-lg tracking-tight bg-gradient-to-r from-cyan-400 via-sky-200 to-white bg-clip-text text-transparent">
+                fasaiforcast.com
               </span>
-              <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-red-500/20 text-red-400 border border-red-500/30 animate-pulse">
-                <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
-                LIVE REALTIME
+              <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">
+                <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping"></span>
+                ฟ้าใส LIVE
               </span>
             </div>
             <p className="text-[11px] text-slate-400 hidden sm:block">
-              ระบบเฝ้าระวังน้ำท่วม & เรดาร์พายุแบบเรียลไทม์
+              ฟ้าใสพยากรณ์ · ระบบเฝ้าระวังน้ำท่วม & เรดาร์พายุแบบเรียลไทม์
             </p>
           </div>
         </div>

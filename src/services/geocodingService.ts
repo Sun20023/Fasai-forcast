@@ -109,7 +109,7 @@ export async function searchLocations(query: string): Promise<SearchResultItem[]
       const res = await fetch(url, {
         headers: {
           'Accept-Language': 'th,en',
-          'User-Agent': 'ThaiFloodLive-Geo/1.0'
+          'User-Agent': 'FasaiForecast-Geo/1.0 (https://fasaiforcast.com)'
         }
       });
       if (res.ok) {

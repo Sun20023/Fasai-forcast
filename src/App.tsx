@@ -308,7 +308,7 @@ export const App: React.FC = () => {
       message,
       timestamp: 'เมื่อสักครู่',
       recommendedAction: 'ตรวจเช็คอุปกรณ์ป้องกันน้ำท่วมและติดตามข่าวสารอย่างใกล้ชิด',
-      source: 'ระบบทดสอบสัญญาณเตือนภัย ThaiFlood Live'
+      source: 'ระบบเตือนภัย fasaiforcast.com (ฟ้าใสพยากรณ์)'
     };
 
     sendBrowserNotification(testAlert);

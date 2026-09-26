@@ -1,7 +1,7 @@
 @echo off
-title ThaiFlood Live - Real-Time Flood & Weather Alert Server
+title fasaiforcast.com - ฟ้าใสพยากรณ์ Real-Time Flood & Weather Server
 echo ========================================================
-echo   ThaiFlood Live - Realtime Flood Monitoring System
+echo   fasaiforcast.com - ฟ้าใสพยากรณ์ Monitoring System
 echo ========================================================
 echo.
 echo [1/2] Building optimized production assets...

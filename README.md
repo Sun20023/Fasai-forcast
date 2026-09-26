@@ -1,7 +1,7 @@
-# 🌊 ThaiFlood Live
+# 🌊 fasaiforcast.com (ฟ้าใสพยากรณ์)
 > **ระบบติดตามสถานการณ์น้ำท่วม พยากรณ์อากาศพายุฝน และแจ้งเตือนภัยแบบเรียลไทม์ (Real-Time Flood & Severe Weather Early Warning Platform)**
 
-![ThaiFlood Live](https://img.shields.io/badge/Status-Production%20Ready-emerald?style=for-the-badge)
+![fasaiforcast.com](https://img.shields.io/badge/fasaiforcast.com-Production%20Ready-cyan?style=for-the-badge)
 ![React 19](https://img.shields.io/badge/React-19.2-blue?style=for-the-badge&logo=react)
 ![Vite 8](https://img.shields.io/badge/Vite-8.3-purple?style=for-the-badge&logo=vite)
 ![Tailwind CSS v4](https://img.shields.io/badge/TailwindCSS-v4-cyan?style=for-the-badge&logo=tailwindcss)
