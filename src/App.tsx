@@ -7,6 +7,7 @@ import { DetailSidebar } from './components/DetailSidebar';
 import { AlertsModal } from './components/AlertsModal';
 import { WatchlistModal } from './components/WatchlistModal';
 import { EmergencyModal } from './components/EmergencyModal';
+import { AiRoutePlannerModal } from './components/AiRoutePlannerModal';
 
 import { ZoneLegend } from './components/ZoneLegend';
 import { 
@@ -17,7 +18,8 @@ import {
   WeatherCondition, 
   RiverDischargeForecast, 
   WatchedArea,
-  FloodZone
+  FloodZone,
+  AiSafeRouteOption
 } from './types/flood';
 import { 
   INITIAL_STATIONS, 
@@ -77,6 +79,8 @@ export const App: React.FC = () => {
   const [isAlertsModalOpen, setIsAlertsModalOpen] = useState(false);
   const [isWatchlistModalOpen, setIsWatchlistModalOpen] = useState(false);
   const [isEmergencyModalOpen, setIsEmergencyModalOpen] = useState(false);
+  const [isAiRouteModalOpen, setIsAiRouteModalOpen] = useState(false);
+  const [activeAiRoute, setActiveAiRoute] = useState<AiSafeRouteOption | null>(null);
 
   // System & Settings
   const [soundEnabled, setSoundState] = useState<boolean>(true);
@@ -362,6 +366,7 @@ export const App: React.FC = () => {
         onOpenAlerts={() => setIsAlertsModalOpen(true)}
         onOpenWatchlist={() => setIsWatchlistModalOpen(true)}
         onOpenEmergency={() => setIsEmergencyModalOpen(true)}
+        onOpenAiRoutePlanner={() => setIsAiRouteModalOpen(true)}
         soundEnabled={soundEnabled}
         onToggleSound={handleToggleSound}
         notificationPermission={notificationPermission}
@@ -409,6 +414,9 @@ export const App: React.FC = () => {
           onMapClickCoordinates={handleMapClick}
           centerCoords={centerCoords}
           tempPinCoords={tempPinCoords}
+          activeAiRoute={activeAiRoute}
+          onClearAiRoute={() => setActiveAiRoute(null)}
+          onOpenAiRoutePlanner={() => setIsAiRouteModalOpen(true)}
         />
 
         {/* Floating Color Risk Zone Legend & Filter */}
@@ -508,6 +516,29 @@ export const App: React.FC = () => {
       <EmergencyModal
         isOpen={isEmergencyModalOpen}
         onClose={() => setIsEmergencyModalOpen(false)}
+      />
+
+      <AiRoutePlannerModal
+        isOpen={isAiRouteModalOpen}
+        onClose={() => setIsAiRouteModalOpen(false)}
+        floodedRoads={floodedRoads}
+        userLocation={
+          customLocation 
+            ? { lat: customLocation.lat, lng: customLocation.lng } 
+            : centerCoords 
+            ? { lat: centerCoords.lat, lng: centerCoords.lng } 
+            : null
+        }
+        onSelectRouteOnMap={(route) => {
+          setActiveAiRoute(route);
+          if (route.coordinates.length > 0) {
+            setCenterCoords({
+              lat: route.coordinates[0][0],
+              lng: route.coordinates[0][1],
+              zoom: 12
+            });
+          }
+        }}
       />
 
     </div>

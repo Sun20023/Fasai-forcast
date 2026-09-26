@@ -6,9 +6,12 @@ import {
   Compass, 
   ZoomIn, 
   ZoomOut,
-  ShieldAlert
+  ShieldAlert,
+  Sparkles,
+  X
 } from 'lucide-react';
-import { WaterStation, DamInfo, RadarData, FloodAlert, FloodZone, FloodedRoad } from '../types/flood';
+import { WaterStation, DamInfo, RadarData, FloodAlert, FloodZone, FloodedRoad, AiSafeRouteOption } from '../types/flood';
+import { buildSingleRoadDetourUrls } from '../services/aiFloodRouter';
 
 // Fix Leaflet default marker icon asset paths safeguard
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -57,6 +60,9 @@ interface FloodMapProps {
   floodedRoads?: FloodedRoad[];
   roadLastUpdated?: string;
   onRefreshRoads?: () => void;
+  activeAiRoute?: AiSafeRouteOption | null;
+  onClearAiRoute?: () => void;
+  onOpenAiRoutePlanner?: () => void;
   activeZoneFilter: 'all' | 'red' | 'orange' | 'yellow' | 'green';
   onSelectZone: (zone: FloodZone) => void;
   radarData: RadarData | null;
@@ -79,6 +85,9 @@ export const FloodMap: React.FC<FloodMapProps> = ({
   floodedRoads = [],
   roadLastUpdated,
   onRefreshRoads,
+  activeAiRoute,
+  onClearAiRoute,
+  onOpenAiRoutePlanner,
   activeZoneFilter,
   onSelectZone,
   radarData,
@@ -97,6 +106,7 @@ export const FloodMap: React.FC<FloodMapProps> = ({
   const baseTileLayerRef = useRef<L.TileLayer | null>(null);
   const radarTileLayerRef = useRef<L.TileLayer | null>(null);
   const markersLayerGroupRef = useRef<L.LayerGroup | null>(null);
+  const aiRouteLayerGroupRef = useRef<L.LayerGroup | null>(null);
   const tempPinMarkerRef = useRef<L.Marker | null>(null);
 
   // Default to 100% Free OpenStreetMap
@@ -143,6 +153,10 @@ export const FloodMap: React.FC<FloodMapProps> = ({
     // Markers layer group
     const markersGroup = L.layerGroup().addTo(map);
     markersLayerGroupRef.current = markersGroup;
+
+    // AI Safe Route layer group
+    const aiRouteGroup = L.layerGroup().addTo(map);
+    aiRouteLayerGroupRef.current = aiRouteGroup;
 
     // Map Click Listener
     map.on('click', (e: L.LeafletMouseEvent) => {
@@ -284,6 +298,81 @@ export const FloodMap: React.FC<FloodMapProps> = ({
       tempPinMarkerRef.current = marker;
     }
   }, [tempPinCoords]);
+
+  // 5.5 Render Active AI Safe Route Polyline & Waypoints
+  useEffect(() => {
+    if (!mapInstanceRef.current || !aiRouteLayerGroupRef.current) return;
+    const group = aiRouteLayerGroupRef.current;
+    group.clearLayers();
+
+    if (!activeAiRoute || !activeAiRoute.coordinates || activeAiRoute.coordinates.length < 2) return;
+
+    const isSafe = activeAiRoute.isSafe;
+
+    // 1. Outer Neon Glow Line
+    const glowPolyline = L.polyline(activeAiRoute.coordinates, {
+      color: isSafe ? '#06b6d4' : '#ef4444',
+      weight: 12,
+      opacity: 0.45,
+      lineCap: 'round',
+      lineJoin: 'round'
+    });
+
+    // 2. Core Animated Route Line
+    const corePolyline = L.polyline(activeAiRoute.coordinates, {
+      color: isSafe ? '#10b981' : '#f87171',
+      weight: 6,
+      opacity: 0.95,
+      dashArray: '8, 6',
+      lineCap: 'round',
+      lineJoin: 'round'
+    });
+
+    corePolyline.bindTooltip(`
+      <div class="font-bold text-xs ${isSafe ? 'text-emerald-400' : 'text-rose-400'}">
+        ${activeAiRoute.title}
+      </div>
+      <div class="text-[11px] text-slate-300">ระยะทาง ${activeAiRoute.distanceKm} กม. • ~${activeAiRoute.estimatedTimeMin} นาที</div>
+    `, { sticky: true, opacity: 0.95 });
+
+    group.addLayer(glowPolyline);
+    group.addLayer(corePolyline);
+
+    // Start & Destination Markers
+    const startCoord = activeAiRoute.coordinates[0];
+    const endCoord = activeAiRoute.coordinates[activeAiRoute.coordinates.length - 1];
+
+    const startIcon = L.divIcon({
+      className: 'ai-route-start-pin',
+      html: `
+        <div class="flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-600 text-white font-bold text-[10px] shadow-2xl border-2 border-emerald-300 whitespace-nowrap">
+          <span>🟢 จุดเริ่มต้น</span>
+        </div>
+      `,
+      iconSize: [80, 24],
+      iconAnchor: [40, 12]
+    });
+    const startMarker = L.marker(startCoord, { icon: startIcon });
+    group.addLayer(startMarker);
+
+    const endIcon = L.divIcon({
+      className: 'ai-route-end-pin',
+      html: `
+        <div class="flex items-center gap-1 px-2.5 py-1 rounded-full bg-cyan-600 text-white font-bold text-[10px] shadow-2xl border-2 border-cyan-300 whitespace-nowrap pulse-critical">
+          <span>🏁 ปลายทาง</span>
+        </div>
+      `,
+      iconSize: [80, 24],
+      iconAnchor: [40, 12]
+    });
+    const endMarker = L.marker(endCoord, { icon: endIcon });
+    group.addLayer(endMarker);
+
+    // Auto fit bounds with gentle animation
+    const bounds = L.latLngBounds(activeAiRoute.coordinates);
+    mapInstanceRef.current.fitBounds(bounds, { padding: [70, 70], maxZoom: 13 });
+
+  }, [activeAiRoute]);
 
   // 6. Render Color Zones, Stations, and Dams
   useEffect(() => {
@@ -612,6 +701,8 @@ export const FloodMap: React.FC<FloodMapProps> = ({
           ? '<span class="text-emerald-400 font-bold">🔻 สูบระบายลดลงต่อเนื่อง</span>'
           : '<span class="text-amber-300 font-medium">➡️ ระดับน้ำทรงตัว</span>';
 
+        const detour = buildSingleRoadDetourUrls(road);
+
         const popupHtml = `
           <div class="p-2.5 min-w-[280px]">
             <div class="flex items-center justify-between gap-1.5 mb-1.5">
@@ -660,6 +751,28 @@ export const FloodMap: React.FC<FloodMapProps> = ({
 
             <div class="bg-rose-950/40 p-2 rounded-xl border border-rose-500/30 text-[10px] text-rose-200 mb-2.5">
               <strong>ทางเลี่ยงแนะนำ:</strong> ${road.detourAdvice}
+            </div>
+
+            {/* Google Maps & Apple Maps 1-Click Detour */}
+            <div class="grid grid-cols-2 gap-1.5 mb-2.5">
+              <a 
+                href="${detour.googleMapsUrl}" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                class="py-1.5 px-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-[10px] text-center flex items-center justify-center gap-1 shadow-sm transition-all"
+                title="เปิดเส้นทางเลี่ยงจุดนี้บน Google Maps ทันที"
+              >
+                <span>🗺️ เลี่ยงใน Google Maps</span>
+              </a>
+              <a 
+                href="${detour.appleMapsUrl}" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                class="py-1.5 px-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-100 border border-slate-600 font-bold text-[10px] text-center flex items-center justify-center gap-1 shadow-sm transition-all"
+                title="เปิดเส้นทางเลี่ยงจุดนี้บน Apple Maps ทันที"
+              >
+                <span>🍏 เลี่ยงใน Apple Maps</span>
+              </a>
             </div>
 
             <div class="flex items-center justify-between text-[10px] text-slate-400 mb-2 px-1">
@@ -815,6 +928,18 @@ export const FloodMap: React.FC<FloodMapProps> = ({
           </button>
         </div>
 
+        {/* AI Route Planner Button */}
+        {onOpenAiRoutePlanner && (
+          <button
+            onClick={onOpenAiRoutePlanner}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-cyan-600 via-sky-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white text-xs font-bold shadow-xl shadow-cyan-600/30 border border-cyan-400/50 transition-all active:scale-95 group"
+            title="เปิด AI คำนวณเส้นทางเลี่ยงน้ำท่วม พร้อมส่งออกไปยัง Apple Maps / Google Maps"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-yellow-300 animate-pulse group-hover:rotate-12 transition-transform" />
+            <span>AI นำทางเลี่ยงน้ำท่วม</span>
+          </button>
+        )}
+
         {/* Layer Toggle Menu */}
         <div className="relative">
           <button
@@ -935,6 +1060,54 @@ export const FloodMap: React.FC<FloodMapProps> = ({
               <span>⚡ สด</span>
             </button>
           )}
+        </div>
+      )}
+
+      {/* Active AI Route Banner */}
+      {activeAiRoute && (
+        <div className="absolute top-16 left-1/2 -translate-x-1/2 z-[1000] flex items-center gap-2.5 sm:gap-3 px-3 sm:px-4 py-2 rounded-2xl glass-panel text-white text-xs border border-cyan-500/50 shadow-2xl backdrop-blur-2xl animate-fade-in max-w-[95vw]">
+          <div className="flex items-center gap-2">
+            <span className="relative flex h-2.5 w-2.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+            </span>
+            <div>
+              <div className="font-bold text-xs text-cyan-300 flex items-center gap-1.5 truncate max-w-[180px] sm:max-w-md">
+                <span>{activeAiRoute.title}</span>
+              </div>
+              <span className="text-[10px] text-slate-300 block">
+                ระยะทาง {activeAiRoute.distanceKm} กม. • ~{activeAiRoute.estimatedTimeMin} นาที • ปลอดภัย {activeAiRoute.safetyScorePercent}%
+              </span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1.5 shrink-0">
+            <a
+              href={activeAiRoute.googleMapsUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-2 sm:px-3 py-1 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-[10px] sm:text-xs flex items-center gap-1 shadow-sm transition-all"
+            >
+              <span>🗺️ Google Maps</span>
+            </a>
+            <a
+              href={activeAiRoute.appleMapsUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-2 sm:px-3 py-1 rounded-xl bg-slate-800 hover:bg-slate-700 text-white border border-slate-600 font-bold text-[10px] sm:text-xs flex items-center gap-1 shadow-sm transition-all"
+            >
+              <span>🍏 Apple Maps</span>
+            </a>
+            {onClearAiRoute && (
+              <button
+                onClick={onClearAiRoute}
+                className="p-1 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"
+                title="ล้างเส้นทาง AI ออกจากแผนที่"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
         </div>
       )}
 

@@ -13,7 +13,8 @@ import {
   RefreshCw,
   Loader2,
   MapPin,
-  X
+  X,
+  Sparkles
 } from 'lucide-react';
 import { WatchedArea } from '../types/flood';
 import { searchLocations, SearchResultItem } from '../services/geocodingService';
@@ -24,6 +25,7 @@ interface NavbarProps {
   onOpenAlerts: () => void;
   onOpenWatchlist: () => void;
   onOpenEmergency: () => void;
+  onOpenAiRoutePlanner?: () => void;
   soundEnabled: boolean;
   onToggleSound: () => void;
   notificationPermission: NotificationPermission;
@@ -41,6 +43,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenAlerts,
   onOpenWatchlist,
   onOpenEmergency,
+  onOpenAiRoutePlanner,
   soundEnabled,
   onToggleSound,
   notificationPermission,
@@ -297,6 +300,18 @@ export const Navbar: React.FC<NavbarProps> = ({
             )}
           </button>
 
+          {/* AI Safe Flood-Free Route Planner Trigger */}
+          {onOpenAiRoutePlanner && (
+            <button
+              onClick={onOpenAiRoutePlanner}
+              title="ระบบ AI คำนวณปริมาณน้ำ & วางแผนเส้นทางเลี่ยงน้ำท่วม (Apple Maps & Google Maps)"
+              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg sm:rounded-xl bg-gradient-to-r from-cyan-600 via-blue-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-white text-[11px] sm:text-xs font-bold shadow-md sm:shadow-lg shadow-cyan-600/30 transition-all shrink-0 active:scale-95 border border-cyan-400/40"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-cyan-200 animate-pulse" />
+              <span>AI เลี่ยงน้ำท่วม</span>
+            </button>
+          )}
+
           {/* Emergency Alert Bulletin Trigger */}
           <button
             onClick={onOpenAlerts}
@@ -414,6 +429,18 @@ export const Navbar: React.FC<NavbarProps> = ({
           >
             <Navigation className="w-3.5 h-3.5" />
           </button>
+
+          {/* Mobile AI Route Planner */}
+          {onOpenAiRoutePlanner && (
+            <button
+              onClick={onOpenAiRoutePlanner}
+              title="AI วางแผนเลี่ยงน้ำท่วม (Apple & Google Maps)"
+              className="flex items-center gap-1 px-2 h-8 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 border border-cyan-400/40 text-white font-bold text-[11px] shadow-sm shrink-0 active:scale-95"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-cyan-200 animate-pulse" />
+              <span>AI</span>
+            </button>
+          )}
 
           {/* Mobile Refresh */}
           <button

@@ -141,3 +141,50 @@ export interface FloodedRoad {
   trafficSpeed?: string; // e.g. "รถชะลอตัว 5-10 กม./ชม."
   liveRainRate?: number; // mm/h
 }
+
+export interface AiFloodForecast {
+  roadId: string;
+  roadName: string;
+  province: string;
+  currentDepthCm: number;
+  predictedDepth1h: number;
+  predictedDepth3h: number;
+  predictedDepth6h: number;
+  waterVolumeInflowM3PerHr: number; // ปริมาณน้ำหลากไหลเข้า (ลบ.ม./ชม.)
+  drainageRateM3PerHr: number; // อัตราสูบระบายของเครื่องสูบน้ำ (ลบ.ม./ชม.)
+  netAccumulationRateCmPerHr: number; // อัตราน้ำขังสุทธิ (ซม./ชม.)
+  riskEscalationLevel: 'critical' | 'high' | 'moderate' | 'low';
+  aiAnalysisSummary: string;
+}
+
+export interface AiSafeRouteOption {
+  id: string;
+  title: string;
+  routeType: 'safe_recommended' | 'alternative_tollway' | 'risky_shortest';
+  isSafe: boolean;
+  floodedPointsAvoided: number;
+  distanceKm: number;
+  estimatedTimeMin: number;
+  safetyScorePercent: number; // 0 - 100
+  vehicleRecommendation: 'all_vehicles' | 'high_clearance_only' | 'prohibited';
+  summaryDescription: string;
+  keyWaypointsDescription: string[];
+  coordinates: [number, number][]; // polyline สำหรับวาดบนแผนที่
+  googleMapsUrl: string;
+  appleMapsUrl: string;
+}
+
+export interface AiRoutePlanResult {
+  originName: string;
+  originCoords: [number, number];
+  destinationName: string;
+  destinationCoords: [number, number];
+  timestamp: string;
+  routes: AiSafeRouteOption[];
+  floodedRoadsInVicinity: FloodedRoad[];
+  aiHydrologyInsight: {
+    bkkOverallRainVolumeMm: number;
+    peakInflowWindow: string;
+    safestTravelAdvice: string;
+  };
+}
