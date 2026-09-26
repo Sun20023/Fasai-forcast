@@ -8,11 +8,13 @@ import {
   ZoomOut,
   ShieldAlert,
   Sparkles,
-  X
+  X,
+  SlidersHorizontal
 } from 'lucide-react';
 import { WaterStation, DamInfo, RadarData, FloodAlert, FloodZone, FloodedRoad, AiSafeRouteOption, WatchedArea } from '../types/flood';
 import { buildSingleRoadDetourUrls } from '../services/aiFloodRouter';
-import { FeatureViewMode, FeatureModeSwitcher } from './FeatureModeSwitcher';
+import { FeatureViewMode } from './FeatureModeSwitcher';
+import { DisplayModeDrawer } from './DisplayModeDrawer';
 
 // Fix Leaflet default marker icon asset paths safeguard
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -128,6 +130,7 @@ export const FloodMap: React.FC<FloodMapProps> = ({
   const [showRiskZones, setShowRiskZones] = useState(true);
   const [showFloodedRoads, setShowFloodedRoads] = useState(true);
   const [showLayerMenu, setShowLayerMenu] = useState(false);
+  const [isModeDrawerOpen, setIsModeDrawerOpen] = useState(false);
 
   // Sync individual layer visibility when featureMode switches
   useEffect(() => {
@@ -1038,6 +1041,22 @@ export const FloodMap: React.FC<FloodMapProps> = ({
   const handleZoomIn = () => mapInstanceRef.current?.zoomIn();
   const handleZoomOut = () => mapInstanceRef.current?.zoomOut();
   const handleResetView = () => mapInstanceRef.current?.flyTo([14.8, 100.8], 6);
+  const getModeInfo = (mode?: FeatureViewMode) => {
+    switch (mode) {
+      case 'roads':
+        return { label: 'ถนนน้ำท่วม', icon: '🛣️', badge: `${floodedRoads.length} สาย` };
+      case 'radar':
+        return { label: 'เรดาร์ฝนสด', icon: '🌧️', badge: 'สด 10 นาที' };
+      case 'stations':
+        return { label: 'ลุ่มน้ำ & เขื่อน', icon: '🌊', badge: `${stations.length + dams.length}` };
+      case 'zones':
+        return { label: 'โซนเตือนภัย', icon: '🎨', badge: `${floodZones.length}` };
+      case 'all':
+      default:
+        return { label: 'แสดงทั้งหมด', icon: '👁️', badge: 'ครบทุกมิติ' };
+    }
+  };
+  const modeInfo = getModeInfo(featureMode);
 
   return (
     <div className="relative w-full h-full min-h-[300px] overflow-hidden select-none bg-slate-900">
@@ -1222,24 +1241,52 @@ export const FloodMap: React.FC<FloodMapProps> = ({
 
       </div>
 
-      {/* Top Floating Feature / Layer Mode Selector (Clean Viewport) */}
+      {/* Top Left: Sleek Display Mode & Layers Trigger Button */}
       {onSelectFeatureMode && featureMode && (
-        <div className="absolute top-14 sm:top-3 left-1/2 -translate-x-1/2 z-[1000] max-w-[96vw]">
-          <FeatureModeSwitcher
-            currentMode={featureMode}
-            onSelectMode={onSelectFeatureMode}
-            roadCount={floodedRoads.length}
-            stationCount={stations.length}
-            zoneCount={floodZones.length}
-          />
+        <div className="absolute top-3 left-3 sm:top-4 sm:left-4 z-[1000] flex items-center gap-2">
+          <button
+            onClick={() => setIsModeDrawerOpen(true)}
+            className="flex items-center gap-2 px-3 py-2 rounded-2xl glass-panel text-white text-xs font-bold shadow-2xl border border-slate-700/90 hover:bg-slate-800/95 active:scale-95 transition-all group pointer-events-auto"
+            title="กดเพื่อเปิดแถบเลือกโหมดแสดงผล (ถนนน้ำท่วม, เรดาร์, ลุ่มน้ำ/เขื่อน, โซนเตือนภัย)"
+          >
+            <div className="w-6 h-6 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 flex items-center justify-center text-white text-xs shadow-md">
+              <SlidersHorizontal className="w-3.5 h-3.5 group-hover:rotate-45 transition-transform" />
+            </div>
+            <div className="flex flex-col text-left">
+              <span className="text-[10px] text-slate-400 font-semibold leading-none">โหมดแสดงผล</span>
+              <span className="text-xs font-black text-cyan-300 flex items-center gap-1.5 leading-tight">
+                <span>{modeInfo.icon} {modeInfo.label}</span>
+                <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-bold">{modeInfo.badge}</span>
+              </span>
+            </div>
+          </button>
         </div>
       )}
 
-      {/* Map Hint Tag */}
-      <div className="absolute top-4 left-4 z-[990] hidden xl:flex items-center gap-2 px-3 py-1.5 rounded-xl glass-panel text-slate-200 text-xs border border-slate-700/70 shadow-lg pointer-events-none">
-        <MapPin className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
-        <span>คลิกบนแผนที่หรือโซนสี เพื่อวิเคราะห์สภาพอากาศ & เสี่ยงน้ำท่วมสด</span>
-      </div>
+      {/* Slide-Over Drawer for Display Modes & Layers (Zero Map Overlap) */}
+      <DisplayModeDrawer
+        isOpen={isModeDrawerOpen}
+        onClose={() => setIsModeDrawerOpen(false)}
+        currentMode={featureMode || 'roads'}
+        onSelectMode={(mode) => {
+          onSelectFeatureMode?.(mode);
+          setIsModeDrawerOpen(false);
+        }}
+        roadCount={floodedRoads.length}
+        stationCount={stations.length}
+        damCount={dams.length}
+        zoneCount={floodZones.length}
+        baseMapType={baseMapType}
+        onSelectBaseMap={(type) => setBaseMapType(type)}
+        showFloodedRoads={showFloodedRoads}
+        setShowFloodedRoads={setShowFloodedRoads}
+        showRiskZones={showRiskZones}
+        setShowRiskZones={setShowRiskZones}
+        showStations={showStations}
+        setShowStations={setShowStations}
+        showDams={showDams}
+        setShowDams={setShowDams}
+      />
 
       {/* Real-time BMA DDS Sensor Feed Status Dock */}
       {showFloodedRoads && floodedRoads && floodedRoads.length > 0 && (

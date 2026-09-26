@@ -318,10 +318,12 @@ export const Navbar: React.FC<NavbarProps> = ({
           {onOpenFahsaiChat && (
             <button
               onClick={onOpenFahsaiChat}
-              title="คุยกับหนูน้อยฟ้าใสพยากรณ์ (AI วิเคราะห์สภาพอากาศและน้ำท่วมขัง)"
-              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg sm:rounded-xl bg-gradient-to-r from-pink-600 via-rose-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white text-[11px] sm:text-xs font-bold shadow-md sm:shadow-lg shadow-pink-600/30 transition-all shrink-0 active:scale-95 border border-pink-400/40"
+              title="คุยกับหนูน้อยฟ้าใสพยากรณ์ (ฮินะ อามาโนะ - Weathering with You AI)"
+              className="flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg sm:rounded-xl bg-gradient-to-r from-pink-600 via-rose-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white text-[11px] sm:text-xs font-bold shadow-md sm:shadow-lg shadow-pink-600/30 transition-all shrink-0 active:scale-95 border border-pink-400/40"
             >
-              <span>👧</span>
+              <div className="w-5 h-5 rounded-full overflow-hidden border border-white shadow-sm shrink-0">
+                <img src="/images/fahsai-avatar.png" alt="ฟ้าใส" className="w-full h-full object-cover" />
+              </div>
               <span className="hidden sm:inline">หนูน้อยฟ้าใส</span>
             </button>
           )}
