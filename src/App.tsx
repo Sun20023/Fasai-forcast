@@ -327,7 +327,7 @@ export const App: React.FC = () => {
   const criticalAlertCount = alerts.filter(a => a.severity === 'critical').length;
 
   return (
-    <div className="flex flex-col h-screen w-screen overflow-hidden bg-slate-950 font-sans">
+    <div className="flex flex-col h-screen w-full max-w-[100vw] overflow-hidden overflow-x-hidden bg-slate-950 font-sans select-none">
       
       {/* 1. Header Navigation */}
       <Navbar
