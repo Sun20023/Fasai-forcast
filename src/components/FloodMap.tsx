@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import L from 'leaflet';
 import { 
   Layers, 
@@ -15,6 +15,7 @@ import { WaterStation, DamInfo, RadarData, FloodAlert, FloodZone, FloodedRoad, A
 import { buildSingleRoadDetourUrls } from '../services/aiFloodRouter';
 import { FeatureViewMode } from './FeatureModeSwitcher';
 import { DisplayModeDrawer } from './DisplayModeDrawer';
+import { batchSnapRoads } from '../services/roadSnappingService';
 
 // Fix Leaflet default marker icon asset paths safeguard
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -131,6 +132,31 @@ export const FloodMap: React.FC<FloodMapProps> = ({
   const [showFloodedRoads, setShowFloodedRoads] = useState(true);
   const [showLayerMenu, setShowLayerMenu] = useState(false);
   const [isModeDrawerOpen, setIsModeDrawerOpen] = useState(false);
+
+  // Snapped road coordinates (OSRM road geometry cache)
+  const [snappedRoads, setSnappedRoads] = useState<Map<string, [number, number][]>>(new Map());
+
+  // Snap flooded road coordinates to actual road geometry via OSRM (cached in localStorage)
+  useEffect(() => {
+    if (!floodedRoads || floodedRoads.length === 0) return;
+
+    let cancelled = false;
+    const doSnap = async () => {
+      try {
+        const result = await batchSnapRoads(
+          floodedRoads.map(r => ({ id: r.id, coordinates: r.coordinates }))
+        );
+        if (!cancelled) {
+          setSnappedRoads(result);
+        }
+      } catch (err) {
+        console.warn('Road snapping batch failed:', err);
+      }
+    };
+    doSnap();
+
+    return () => { cancelled = true; };
+  }, [floodedRoads]);
 
   // Sync individual layer visibility when featureMode switches
   useEffect(() => {
@@ -855,12 +881,15 @@ export const FloodMap: React.FC<FloodMapProps> = ({
         const isCritical = road.status === 'critical';
         const isWarning = road.status === 'warning';
 
+        // Use OSRM-snapped coordinates if available, otherwise fallback to raw waypoints
+        const renderCoords = snappedRoads.get(road.id) || road.coordinates;
+
         // Outer glow color & inner core color
         const glowColor = isCritical ? '#ef4444' : isWarning ? '#f97316' : '#10b981';
         const coreColor = isCritical ? '#ff2a2a' : isWarning ? '#fb923c' : '#34d399';
 
         // 1. Outer Glow Polyline
-        const glowPolyline = L.polyline(road.coordinates, {
+        const glowPolyline = L.polyline(renderCoords, {
           color: glowColor,
           weight: isCritical ? 10 : 8,
           opacity: 0.45,
@@ -870,7 +899,7 @@ export const FloodMap: React.FC<FloodMapProps> = ({
         });
 
         // 2. Foreground Animated / Dashed Polyline
-        const corePolyline = L.polyline(road.coordinates, {
+        const corePolyline = L.polyline(renderCoords, {
           color: coreColor,
           weight: isCritical ? 5 : 4,
           opacity: 0.95,
@@ -1035,7 +1064,7 @@ export const FloodMap: React.FC<FloodMapProps> = ({
       });
     }
 
-  }, [stations, dams, floodZones, floodedRoads, showStations, showDams, showRiskZones, showFloodedRoads, activeZoneFilter]);
+  }, [stations, dams, floodZones, floodedRoads, snappedRoads, showStations, showDams, showRiskZones, showFloodedRoads, activeZoneFilter]);
 
   // Zoom helpers
   const handleZoomIn = () => mapInstanceRef.current?.zoomIn();
