@@ -25,6 +25,8 @@ export const RadarControls: React.FC<RadarControlsProps> = ({
   isRadarVisible,
   onToggleRadarVisible
 }) => {
+  const [isMinimized, setIsMinimized] = React.useState(false);
+
   if (!radarData || !radarData.past || radarData.past.length === 0) {
     return null;
   }
@@ -42,48 +44,59 @@ export const RadarControls: React.FC<RadarControlsProps> = ({
   const isForecast = currentFrameIndex >= radarData.past.length;
 
   return (
-    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-[1000] w-[92%] max-w-xl glass-panel rounded-2xl p-3 sm:p-4 text-slate-100 shadow-2xl border border-slate-700/60 backdrop-blur-xl">
+    <div className="absolute bottom-3 sm:bottom-6 left-1/2 -translate-x-1/2 z-[1000] w-[calc(100vw-1.5rem)] sm:w-[92%] max-w-xl glass-panel rounded-2xl p-2.5 sm:p-4 text-slate-100 shadow-2xl border border-slate-700/60 backdrop-blur-xl transition-all">
       
-      {/* Header bar: Status + Visibility Toggle */}
-      <div className="flex items-center justify-between gap-2 mb-2.5">
-        <div className="flex items-center gap-2">
-          <div className="p-1.5 rounded-lg bg-cyan-500/20 text-cyan-400">
-            <CloudRain className="w-4 h-4 animate-bounce" />
+      {/* Header bar: Status + Visibility Toggle + Minimize/Maximize */}
+      <div className="flex items-center justify-between gap-1.5 sm:gap-2 mb-2">
+        <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+          <div className="p-1 sm:p-1.5 rounded-lg bg-cyan-500/20 text-cyan-400 shrink-0">
+            <CloudRain className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-bounce" />
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs sm:text-sm font-bold text-white tracking-wide">
-                เรดาร์ตรวจจับกลุ่มฝนและพายุสด
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs sm:text-sm font-bold text-white tracking-wide truncate">
+                เรดาร์กลุ่มฝนสด
               </span>
-              <span className={`text-[10px] px-1.5 py-0.2 rounded font-semibold ${
+              <span className={`text-[9px] sm:text-[10px] px-1 sm:px-1.5 py-0.2 rounded font-semibold shrink-0 ${
                 isForecast 
                   ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30' 
                   : 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
               }`}>
-                {isForecast ? 'พยากรณ์ล่วงหน้า' : 'ข้อมูลสดจริง'}
+                {isForecast ? 'พยากรณ์' : 'สดจริง'}
               </span>
             </div>
-            <p className="text-[11px] text-slate-400">
-              เวลาตรวจวัด: <strong className="text-cyan-300">{formatTime(currentFrame?.time)}</strong>
+            <p className="text-[10px] sm:text-[11px] text-slate-400 truncate">
+              ตรวจวัด: <strong className="text-cyan-300">{formatTime(currentFrame?.time)}</strong>
             </p>
           </div>
         </div>
 
-        {/* Toggle on/off radar layer */}
-        <button
-          onClick={onToggleRadarVisible}
-          className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-semibold border transition-all ${
-            isRadarVisible
-              ? 'bg-cyan-600/80 border-cyan-400/50 text-white shadow-md shadow-cyan-600/30'
-              : 'bg-slate-800/80 border-slate-700 text-slate-400 hover:text-white'
-          }`}
-        >
-          <Eye className="w-3.5 h-3.5" />
-          <span>{isRadarVisible ? 'เปิดเรดาร์' : 'ปิดเรดาร์'}</span>
-        </button>
+        <div className="flex items-center gap-1 shrink-0">
+          {/* Toggle on/off radar layer */}
+          <button
+            onClick={onToggleRadarVisible}
+            className={`flex items-center gap-1 px-2 py-1 rounded-xl text-[11px] sm:text-xs font-semibold border transition-all ${
+              isRadarVisible
+                ? 'bg-cyan-600/80 border-cyan-400/50 text-white shadow-md shadow-cyan-600/30'
+                : 'bg-slate-800/80 border-slate-700 text-slate-400 hover:text-white'
+            }`}
+          >
+            <Eye className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+            <span className="hidden xs:inline">{isRadarVisible ? 'เปิดเรดาร์' : 'ปิดเรดาร์'}</span>
+          </button>
+
+          {/* Minimize / Maximize Dock */}
+          <button
+            onClick={() => setIsMinimized(!isMinimized)}
+            className="p-1 px-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-white border border-slate-700 text-[10px] sm:text-xs font-bold transition-colors"
+            title={isMinimized ? 'ขยายแถบควบคุมเรดาร์' : 'ย่อแถบควบคุม'}
+          >
+            {isMinimized ? '▴ ขยาย' : '▾ ย่อ'}
+          </button>
+        </div>
       </div>
 
-      {isRadarVisible && (
+      {!isMinimized && isRadarVisible && (
         <>
           {/* Timeline Scrub Slider */}
           <div className="flex items-center gap-2 mb-2">

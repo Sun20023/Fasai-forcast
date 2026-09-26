@@ -576,68 +576,73 @@ export const FloodMap: React.FC<FloodMapProps> = ({
       />
 
       {/* Top Bar Quick Controls: 100% Free Map Styles (NO API KEY REQUIRED) */}
-      <div className="absolute top-4 right-4 z-[1000] flex flex-col items-end gap-2">
+      <div className="absolute top-3 right-3 sm:top-4 sm:right-4 z-[1000] flex flex-col items-end gap-1.5 sm:gap-2">
         
         {/* Direct 1-Click Map Switcher */}
-        <div className="flex items-center gap-1 glass-panel rounded-2xl p-1 shadow-2xl border border-slate-700/80">
+        <div className="flex items-center gap-0.5 sm:gap-1 glass-panel rounded-xl sm:rounded-2xl p-0.5 sm:p-1 shadow-2xl border border-slate-700/80">
           <button
             onClick={() => setBaseMapType('osm')}
-            className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+            className={`px-1.5 py-1 sm:px-2.5 sm:py-1.5 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-bold transition-all ${
               baseMapType === 'osm'
                 ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/30'
                 : 'text-slate-300 hover:text-white hover:bg-slate-800'
             }`}
             title="แผนที่ OpenStreetMap (ฟรี 100% ไม่ต้องใช้ API Key)"
           >
-            🗺️ แผนที่ปกติ (OSM)
+            <span>🗺️</span>
+            <span className="hidden sm:inline ml-1">ปกติ</span>
           </button>
 
           <button
             onClick={() => setBaseMapType('topo')}
-            className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+            className={`px-1.5 py-1 sm:px-2.5 sm:py-1.5 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-bold transition-all ${
               baseMapType === 'topo'
                 ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/30'
                 : 'text-slate-300 hover:text-white hover:bg-slate-800'
             }`}
             title="แผนที่ภูมิประเทศและลุ่มน้ำ (Esri Topo)"
           >
-            🏔️ ลุ่มน้ำ/ภูมิประเทศ
+            <span>🏔️</span>
+            <span className="hidden sm:inline ml-1">ลุ่มน้ำ</span>
           </button>
 
           <button
             onClick={() => setBaseMapType('street')}
-            className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+            className={`px-1.5 py-1 sm:px-2.5 sm:py-1.5 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-bold transition-all ${
               baseMapType === 'street'
                 ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/30'
                 : 'text-slate-300 hover:text-white hover:bg-slate-800'
             }`}
             title="แผนที่ถนนคมชัด (Esri Street)"
           >
-            🛣️ ถนน
+            <span>🛣️</span>
+            <span className="hidden sm:inline ml-1">ถนน</span>
           </button>
 
           <button
             onClick={() => setBaseMapType('dark')}
-            className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+            className={`px-1.5 py-1 sm:px-2.5 sm:py-1.5 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-bold transition-all ${
               baseMapType === 'dark'
                 ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/30'
                 : 'text-slate-300 hover:text-white hover:bg-slate-800'
             }`}
             title="โหมดมืด (Esri Dark Gray)"
           >
-            🌙 มืด
+            <span>🌙</span>
+            <span className="hidden sm:inline ml-1">มืด</span>
           </button>
 
           <button
             onClick={() => setBaseMapType('satellite')}
-            className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+            className={`px-1.5 py-1 sm:px-2.5 sm:py-1.5 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-bold transition-all ${
               baseMapType === 'satellite'
                 ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/30'
                 : 'text-slate-300 hover:text-white hover:bg-slate-800'
             }`}
             title="ภาพถ่ายดาวเทียมความละเอียดสูง (Esri Satellite)"
           >
-            🛰️ ดาวเทียม
+            <span>🛰️</span>
+            <span className="hidden sm:inline ml-1">ดาวเทียม</span>
           </button>
         </div>
 

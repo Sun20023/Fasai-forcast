@@ -15,7 +15,12 @@ export const ZoneLegend: React.FC<ZoneLegendProps> = ({
   activeFilter,
   onChangeFilter
 }) => {
-  const [isExpanded, setIsExpanded] = useState(true);
+  const [isExpanded, setIsExpanded] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return window.innerWidth >= 768;
+    }
+    return false;
+  });
   const [selectedLevelForList, setSelectedLevelForList] = useState<'red' | 'orange' | 'yellow' | 'green' | null>(null);
 
   const redZones = zones.filter(z => z.level === 'red');
@@ -24,29 +29,41 @@ export const ZoneLegend: React.FC<ZoneLegendProps> = ({
   const greenZones = zones.filter(z => z.level === 'green');
 
   return (
-    <div className="absolute top-20 left-4 z-[1000] max-w-xs w-[92vw] sm:w-80 glass-panel rounded-2xl shadow-2xl border border-slate-700/80 text-slate-100 transition-all overflow-hidden">
+    <div className={`absolute top-3 left-3 sm:top-4 sm:left-4 z-[990] glass-panel rounded-2xl shadow-2xl border border-slate-700/80 text-slate-100 transition-all overflow-hidden ${
+      isExpanded ? 'w-[calc(100vw-6.5rem)] max-w-xs sm:w-80' : 'w-auto'
+    }`}>
       
-      {/* Header */}
+      {/* Header / Pill Trigger */}
       <div 
         onClick={() => setIsExpanded(!isExpanded)}
-        className="px-3.5 py-2.5 bg-slate-900/90 border-b border-slate-800/80 flex items-center justify-between cursor-pointer hover:bg-slate-800/90 transition-colors select-none"
+        className="px-2.5 py-1.5 sm:px-3.5 sm:py-2.5 bg-slate-900/90 border-b border-slate-800/80 flex items-center justify-between gap-2 cursor-pointer hover:bg-slate-800/90 transition-colors select-none"
       >
         <div className="flex items-center gap-2">
           <div className="p-1 rounded-lg bg-cyan-500/20 text-cyan-400">
-            <ShieldAlert className="w-4 h-4" />
+            <ShieldAlert className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           </div>
           <div>
-            <h3 className="text-xs font-bold text-white tracking-wide">
-              โซนสีระดับความเสี่ยงน้ำท่วม
+            <h3 className="text-[11px] sm:text-xs font-bold text-white tracking-wide flex items-center gap-1.5">
+              <span>โซนสีเสี่ยงภัย</span>
+              {!isExpanded && (
+                <span className="flex items-center gap-0.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-orange-500"></span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-yellow-400"></span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                </span>
+              )}
             </h3>
-            <p className="text-[10px] text-slate-400">
-              เกณฑ์ สทนช. / ปภ. ทั่วประเทศ ({zones.length} โซน)
-            </p>
+            {isExpanded && (
+              <p className="text-[10px] text-slate-400">
+                เกณฑ์ สทนช. / ปภ. ทั่วประเทศ ({zones.length} โซน)
+              </p>
+            )}
           </div>
         </div>
 
-        <button className="text-slate-400 hover:text-white p-1">
-          {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+        <button className="text-slate-400 hover:text-white p-0.5 ml-1">
+          {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
         </button>
       </div>
 

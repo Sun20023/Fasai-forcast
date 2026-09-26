@@ -119,7 +119,7 @@ export const DetailSidebar: React.FC<DetailSidebarProps> = ({
       </div>
 
       {/* Scrollable Content */}
-      <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
+      <div className="flex-1 overflow-y-auto p-3 sm:p-5 space-y-3.5 sm:space-y-4 pb-28 sm:pb-8">
         
         {/* Threat Level Assessment Card */}
         {threatResult && (
