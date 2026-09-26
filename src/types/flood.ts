@@ -126,11 +126,18 @@ export interface FloodedRoad {
   subdistrict?: string;
   status: 'critical' | 'warning' | 'passable'; // critical = แดง (น้ำขังสูง/ห้ามผ่าน), warning = ส้ม (รถเล็กห้ามผ่าน), passable = เขียว (ผ่านได้)
   waterDepth: string; // เช่น "น้ำท่วมขัง 35-50 ซม."
+  waterDepthCm: number; // ความลึกเซนติเมตร
   passability: 'impassable' | 'small_vehicle_prohibited' | 'passable_with_caution';
   passabilityText: string; // เช่น "ปิดการจราจร / รถทุกชนิดห้ามผ่าน" หรือ "รถเล็กไม่ควรผ่าน"
   reportedTime: string;
+  lastUpdatedMinutesAgo?: number;
   cause: string;
   detourAdvice: string;
   coordinates: [number, number][]; // พิกัดเส้นทางถนน
   center: [number, number]; // จุดศูนย์กลางสำหรับปักหมุด/ซูม
+  sensorSource?: string; // e.g. "สำนักการระบายน้ำ กทม. (BMA DDS)"
+  pumpStatus?: string; // e.g. "สถานีสูบน้ำเดินเครื่องเต็มกำลัง"
+  drainageTrend?: 'rising' | 'receding' | 'stable';
+  trafficSpeed?: string; // e.g. "รถชะลอตัว 5-10 กม./ชม."
+  liveRainRate?: number; // mm/h
 }

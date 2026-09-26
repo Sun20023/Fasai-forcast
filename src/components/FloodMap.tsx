@@ -55,6 +55,8 @@ interface FloodMapProps {
   alerts: FloodAlert[];
   floodZones: FloodZone[];
   floodedRoads?: FloodedRoad[];
+  roadLastUpdated?: string;
+  onRefreshRoads?: () => void;
   activeZoneFilter: 'all' | 'red' | 'orange' | 'yellow' | 'green';
   onSelectZone: (zone: FloodZone) => void;
   radarData: RadarData | null;
@@ -75,6 +77,8 @@ export const FloodMap: React.FC<FloodMapProps> = ({
   alerts,
   floodZones,
   floodedRoads = [],
+  roadLastUpdated,
+  onRefreshRoads,
   activeZoneFilter,
   onSelectZone,
   radarData,
@@ -602,8 +606,14 @@ export const FloodMap: React.FC<FloodMapProps> = ({
         glowPolyline.bindTooltip(tooltipHtml, { sticky: true, opacity: 0.95 });
 
         // Click Popup
+        const trendBadge = road.drainageTrend === 'rising'
+          ? '<span class="text-rose-400 font-bold">🔺 ระดับน้ำกำลังเพิ่มขึ้น</span>'
+          : road.drainageTrend === 'receding'
+          ? '<span class="text-emerald-400 font-bold">🔻 สูบระบายลดลงต่อเนื่อง</span>'
+          : '<span class="text-amber-300 font-medium">➡️ ระดับน้ำทรงตัว</span>';
+
         const popupHtml = `
-          <div class="p-2.5 min-w-[270px]">
+          <div class="p-2.5 min-w-[280px]">
             <div class="flex items-center justify-between gap-1.5 mb-1.5">
               <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${
                 isCritical 
@@ -618,23 +628,33 @@ export const FloodMap: React.FC<FloodMapProps> = ({
             </div>
             
             <h4 class="font-bold text-sm text-white mb-1 leading-snug">${road.name}</h4>
-            <div class="text-xs font-bold text-amber-300 mb-2 flex items-center gap-1">
+            <div class="text-xs font-bold text-amber-300 mb-2 flex items-center justify-between">
               <span>🌊 ${road.waterDepth}</span>
-              <span class="text-slate-400 text-[10px] font-normal">(${road.reportedTime})</span>
+              <span class="text-[10px] text-slate-300 font-normal">${trendBadge}</span>
             </div>
 
             <div class="bg-slate-800/80 p-2 rounded-xl text-[11px] space-y-1 mb-2.5 border border-slate-700/60">
               <div class="flex justify-between">
                 <span class="text-slate-400">สถานะจราจร:</span>
-                <strong class="${isCritical ? 'text-red-400' : 'text-slate-200'}">${road.passabilityText}</strong>
+                <strong class="${isCritical ? 'text-red-400' : 'text-slate-200'}">${road.trafficSpeed || road.passabilityText}</strong>
               </div>
-              <div class="flex justify-between">
-                <span class="text-slate-400">สาเหตุ:</span>
-                <span class="text-slate-200 text-right max-w-[170px] truncate">${road.cause}</span>
+              ${road.pumpStatus ? `
+                <div class="flex justify-between items-start gap-1">
+                  <span class="text-slate-400 shrink-0">เครื่องสูบน้ำ:</span>
+                  <span class="text-cyan-300 text-right text-[10px]">${road.pumpStatus}</span>
+                </div>
+              ` : ''}
+              <div class="flex justify-between items-start gap-1">
+                <span class="text-slate-400 shrink-0">สาเหตุ:</span>
+                <span class="text-slate-200 text-right max-w-[175px] truncate">${road.cause}</span>
               </div>
               <div class="flex justify-between">
                 <span class="text-slate-400">พื้นที่:</span>
                 <span class="text-slate-200">อ.${road.district} ${road.subdistrict ? `ต.${road.subdistrict}` : ''}</span>
+              </div>
+              <div class="flex justify-between items-center pt-1 border-t border-slate-700/50 text-[10px]">
+                <span class="text-slate-400">📡 แหล่งเซนเซอร์:</span>
+                <span class="text-slate-300 truncate max-w-[160px]">${road.sensorSource || 'สำนักการระบายน้ำ กทม.'}</span>
               </div>
             </div>
 
@@ -642,8 +662,13 @@ export const FloodMap: React.FC<FloodMapProps> = ({
               <strong>ทางเลี่ยงแนะนำ:</strong> ${road.detourAdvice}
             </div>
 
+            <div class="flex items-center justify-between text-[10px] text-slate-400 mb-2 px-1">
+              <span>⏱️ สถานะล่าสุด:</span>
+              <strong class="text-emerald-400">${road.reportedTime}</strong>
+            </div>
+
             <button id="inspect-road-${road.id}" class="w-full py-1.5 px-3 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white rounded-lg text-xs font-bold transition-all shadow-md">
-              🔍 ตรวจสอบสภาพอากาศพิกัดถนนนี้
+              🔍 ตรวจสอบสภาพอากาศ & เรดาร์สดพิกัดนี้
             </button>
           </div>
         `;
@@ -884,6 +909,34 @@ export const FloodMap: React.FC<FloodMapProps> = ({
         <MapPin className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
         <span>คลิกบนแผนที่หรือโซนสี เพื่อวิเคราะห์สภาพอากาศ & เสี่ยงน้ำท่วมสด</span>
       </div>
+
+      {/* Real-time BMA DDS Sensor Feed Status Dock */}
+      {floodedRoads && floodedRoads.length > 0 && (
+        <div className="absolute bottom-4 left-4 z-[990] hidden md:flex items-center gap-2.5 px-3 py-2 rounded-2xl glass-panel text-slate-100 text-xs border border-slate-700/80 shadow-2xl backdrop-blur-xl">
+          <span className="relative flex h-2.5 w-2.5">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+          </span>
+          <div className="flex flex-col">
+            <div className="flex items-center gap-1.5 font-bold text-slate-100 text-[11px]">
+              <span>LIVE BMA DDS SENSOR FEED</span>
+              <span className="text-[10px] text-cyan-400 font-semibold">• กทม. & ทางหลวง ({floodedRoads.length} สายทาง)</span>
+            </div>
+            <span className="text-[10px] text-slate-400">
+              อัปเดตเรียลไทม์ {roadLastUpdated || 'เมื่อสักครู่'} (เซนเซอร์ กทม. & เรดาร์ฝนสด)
+            </span>
+          </div>
+          {onRefreshRoads && (
+            <button
+              onClick={onRefreshRoads}
+              className="ml-1 px-2.5 py-1 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 text-[10px] font-bold transition-all active:scale-95 flex items-center gap-1 shadow-sm"
+              title="กดเพื่อรีเฟรชข้อมูลเซนเซอร์น้ำท่วมถนนทันที"
+            >
+              <span>⚡ สด</span>
+            </button>
+          )}
+        </div>
+      )}
 
     </div>
   );

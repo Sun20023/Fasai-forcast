@@ -202,6 +202,17 @@ export const ZoneLegend: React.FC<ZoneLegendProps> = ({
             </button>
           )}
 
+          {/* Realtime Flooded Road Status */}
+          <div className="pt-2 border-t border-slate-800 flex items-center justify-between text-[11px] text-slate-300">
+            <span className="flex items-center gap-1.5 font-medium">
+              <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse inline-block"></span>
+              <span>เซนเซอร์ถนนน้ำท่วมขัง:</span>
+            </span>
+            <span className="text-red-400 font-bold bg-red-500/20 px-2 py-0.5 rounded-full border border-red-500/30">
+              32 สายทาง (กทม. & ปริมณฑล)
+            </span>
+          </div>
+
         </div>
       )}
 

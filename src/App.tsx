@@ -27,6 +27,8 @@ import {
 } from './data/mockStations';
 import { FLOOD_COLOR_ZONES } from './data/floodZones';
 import { FLOODED_ROADS_DATA } from './data/floodedRoads';
+import { getRealtimeFloodedRoads, getCachedFloodedRoads } from './services/realtimeRoadService';
+import { FloodedRoad } from './types/flood';
 import { 
   fetchLiveWeather, 
   fetchRiverDischarge, 
@@ -48,6 +50,8 @@ export const App: React.FC = () => {
   const [stations, setStations] = useState<WaterStation[]>(INITIAL_STATIONS);
   const [dams, setDams] = useState<DamInfo[]>(INITIAL_DAMS);
   const [alerts, setAlerts] = useState<FloodAlert[]>(INITIAL_ALERTS);
+  const [floodedRoads, setFloodedRoads] = useState<FloodedRoad[]>(getCachedFloodedRoads());
+  const [roadLastUpdated, setRoadLastUpdated] = useState<string>('เรียลไทม์');
 
   // Radar States
   const [radarData, setRadarData] = useState<RadarData | null>(null);
@@ -108,6 +112,26 @@ export const App: React.FC = () => {
       setCurrentRadarFrameIndex(data.past.length - 1);
     }
   };
+
+  // Real-time Road Refresh (Correlates live Open-Meteo rain & BMA sensor feed)
+  const refreshRoads = useCallback(async () => {
+    try {
+      const res = await getRealtimeFloodedRoads();
+      setFloodedRoads(res.roads);
+      setRoadLastUpdated(res.lastUpdatedText);
+    } catch (err) {
+      console.warn('Failed to refresh realtime roads:', err);
+    }
+  }, []);
+
+  // Initialize Real-time Roads & Auto-refresh polling every 60s
+  useEffect(() => {
+    refreshRoads();
+    const interval = setInterval(() => {
+      refreshRoads();
+    }, 60000);
+    return () => clearInterval(interval);
+  }, [refreshRoads]);
 
   // Radar Animation Loop
   useEffect(() => {
@@ -290,12 +314,13 @@ export const App: React.FC = () => {
     setIsRefreshing(true);
     await Promise.all([
       loadRadar(),
+      refreshRoads(),
       selectedStation ? fetchDeepTelemetry(selectedStation.lat, selectedStation.lng) : null,
       selectedDam ? fetchDeepTelemetry(selectedDam.lat, selectedDam.lng) : null,
       customLocation ? fetchDeepTelemetry(customLocation.lat, customLocation.lng) : null
     ]);
     setIsRefreshing(false);
-    showToast('🔄 อัปเดตข้อมูลล่าสุดเรียบร้อย', 'ดึงข้อมูลสภาพอากาศ เรดาร์ และระดับน้ำล่าสุดสำเร็จ', 'info');
+    showToast('🔄 อัปเดตข้อมูลล่าสุดเรียบร้อย', 'ดึงข้อมูลสภาพอากาศ เรดาร์ และเซนเซอร์น้ำท่วมถนนล่าสุดสำเร็จ', 'info');
   };
 
   // Trigger Test Alert
@@ -369,7 +394,9 @@ export const App: React.FC = () => {
           dams={dams}
           alerts={alerts}
           floodZones={FLOOD_COLOR_ZONES}
-          floodedRoads={FLOODED_ROADS_DATA}
+          floodedRoads={floodedRoads}
+          roadLastUpdated={roadLastUpdated}
+          onRefreshRoads={refreshRoads}
           activeZoneFilter={activeZoneFilter}
           onSelectZone={handleSelectZone}
           radarData={radarData}
