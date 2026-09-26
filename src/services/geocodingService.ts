@@ -110,7 +110,8 @@ export async function searchLocations(query: string): Promise<SearchResultItem[]
         headers: {
           'Accept-Language': 'th,en',
           'User-Agent': 'FasaiForecast-Geo/1.0 (https://fasaiforcast.com)'
-        }
+        },
+        signal: AbortSignal.timeout(3500)
       });
       if (res.ok) {
         const data = await res.json();

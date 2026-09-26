@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   X, 
   AlertOctagon, 
@@ -31,6 +31,15 @@ export const AlertsModal: React.FC<AlertsModalProps> = ({
   const [filterSeverity, setFilterSeverity] = useState<string>('all');
   const [filterType, setFilterType] = useState<string>('all');
 
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   const filteredAlerts = alerts.filter(a => {
@@ -40,8 +49,14 @@ export const AlertsModal: React.FC<AlertsModalProps> = ({
   });
 
   return (
-    <div className="fixed inset-0 z-[1100] flex items-center justify-center p-4 bg-black/75 backdrop-blur-md">
-      <div className="relative w-full max-w-3xl glass-panel bg-slate-900/95 border border-slate-700/80 rounded-3xl shadow-2xl max-h-[90vh] flex flex-col overflow-hidden text-slate-100">
+    <div 
+      onClick={onClose}
+      className="fixed inset-0 z-[1100] flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-md animate-fade-in"
+    >
+      <div 
+        onClick={(e) => e.stopPropagation()}
+        className="relative w-full max-w-3xl glass-panel bg-slate-900/95 border border-slate-700/80 rounded-2xl sm:rounded-3xl shadow-2xl max-h-[90vh] flex flex-col overflow-hidden text-slate-100"
+      >
         
         {/* Header */}
         <div className="p-5 border-b border-slate-800 flex items-center justify-between gap-3 shrink-0">

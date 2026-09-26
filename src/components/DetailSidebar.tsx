@@ -91,8 +91,24 @@ export const DetailSidebar: React.FC<DetailSidebarProps> = ({
     isOverflowing = overflowDiff > 0;
   }
 
+  // ESC key listener to close sidebar
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
   return (
-    <div className="fixed inset-y-0 right-0 z-[1050] w-full sm:w-[460px] glass-panel bg-slate-900/95 backdrop-blur-2xl border-l border-slate-700/80 text-slate-100 shadow-2xl flex flex-col transition-transform duration-300">
+    <>
+      {/* Mobile Backdrop */}
+      <div 
+        onClick={onClose}
+        className="fixed inset-0 bg-black/60 backdrop-blur-xs z-[1040] sm:hidden animate-fade-in"
+      />
+
+      <div className="fixed inset-y-0 right-0 z-[1050] w-full sm:w-[460px] glass-panel bg-slate-900/95 backdrop-blur-2xl border-l border-slate-700/80 text-slate-100 shadow-2xl flex flex-col transition-transform duration-300">
       
       {/* Top Header */}
       <div className="p-4 sm:p-5 border-b border-slate-800 flex items-start justify-between gap-3 shrink-0">
@@ -344,9 +360,18 @@ export const DetailSidebar: React.FC<DetailSidebarProps> = ({
               </div>
 
             </div>
+          ) : isLoadingWeather ? (
+            <div className="space-y-2.5 animate-pulse p-1">
+              <div className="h-14 bg-slate-800/70 rounded-xl"></div>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="h-12 bg-slate-800/70 rounded-xl"></div>
+                <div className="h-12 bg-slate-800/70 rounded-xl"></div>
+              </div>
+              <div className="h-16 bg-slate-800/70 rounded-xl"></div>
+            </div>
           ) : (
             <div className="p-4 text-center text-xs text-slate-400">
-              คลิกเพื่อโหลดข้อมูลพยากรณ์อากาศสด
+              คลิกบนแผนที่เพื่อดึงข้อมูลพยากรณ์อากาศและน้ำหลากสด
             </div>
           )}
         </div>
@@ -411,7 +436,7 @@ export const DetailSidebar: React.FC<DetailSidebarProps> = ({
               lat,
               lng
             })}
-            className="w-full py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-cyan-300 flex items-center justify-center gap-2 transition-all shadow-sm"
+            className="w-full py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-cyan-300 flex items-center justify-center gap-2 transition-all shadow-sm active:scale-98"
           >
             <BookmarkPlus className="w-4 h-4" />
             <span>ปักหมุดเป็นพื้นที่เฝ้าระวังของฉัน</span>
@@ -423,7 +448,7 @@ export const DetailSidebar: React.FC<DetailSidebarProps> = ({
               `สภาพอากาศ: ${weather?.weatherDesc || 'ฝนตกหนัก'} ปริมาณฝน ${weather?.rainCurrent || 0} มม./ชม. ความเสี่ยง: ${threatResult?.threatLevel || 'เฝ้าระวัง'}`,
               threatResult?.threatLevel === 'critical' ? 'critical' : 'warning'
             )}
-            className="w-full py-2.5 px-4 rounded-xl bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/40 text-xs font-semibold text-cyan-200 flex items-center justify-center gap-2 transition-all"
+            className="w-full py-2.5 px-4 rounded-xl bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/40 text-xs font-semibold text-cyan-200 flex items-center justify-center gap-2 transition-all active:scale-98"
           >
             <Bell className="w-4 h-4 text-cyan-400" />
             <span>ทดสอบยิงแจ้งเตือน (Notification & Sound)</span>
@@ -433,5 +458,6 @@ export const DetailSidebar: React.FC<DetailSidebarProps> = ({
       </div>
 
     </div>
+    </>
   );
 };

@@ -43,7 +43,7 @@ export function getWmoWeatherDescription(code: number): { text: string; icon: st
 export async function fetchLiveWeather(lat: number, lng: number): Promise<WeatherCondition> {
   const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,relative_humidity_2m,precipitation,rain,weather_code,wind_speed_10m,wind_gusts_10m&hourly=temperature_2m,precipitation,rain,precipitation_probability&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max&timezone=Asia%2FBangkok&forecast_days=7`;
 
-  const res = await fetch(url);
+  const res = await fetch(url, { signal: AbortSignal.timeout(6000) });
   if (!res.ok) {
     throw new Error(`Weather fetch failed: ${res.statusText}`);
   }
@@ -91,7 +91,7 @@ export async function fetchLiveWeather(lat: number, lng: number): Promise<Weathe
 export async function fetchRiverDischarge(lat: number, lng: number): Promise<RiverDischargeForecast | null> {
   try {
     const url = `https://flood-api.open-meteo.com/v1/flood?latitude=${lat}&longitude=${lng}&daily=river_discharge,river_discharge_mean,river_discharge_max&forecast_days=7`;
-    const res = await fetch(url);
+    const res = await fetch(url, { signal: AbortSignal.timeout(6000) });
     if (!res.ok) return null;
     const data = await res.json();
     if (!data.daily || !data.daily.time) return null;
@@ -110,7 +110,7 @@ export async function fetchRiverDischarge(lat: number, lng: number): Promise<Riv
 
 export async function fetchRainViewerRadar(): Promise<RadarData | null> {
   try {
-    const res = await fetch('https://api.rainviewer.com/public/weather-maps.json');
+    const res = await fetch('https://api.rainviewer.com/public/weather-maps.json', { signal: AbortSignal.timeout(6000) });
     if (!res.ok) return null;
     const data = await res.json();
     return {

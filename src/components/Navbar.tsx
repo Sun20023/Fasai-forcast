@@ -161,6 +161,11 @@ export const Navbar: React.FC<NavbarProps> = ({
                 setIsDropdownOpen(true);
               }}
               onFocus={() => setIsDropdownOpen(true)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && searchResults.length > 0) {
+                  handleSelectItem(searchResults[0]);
+                }
+              }}
               className="w-full pl-9 pr-8 py-1.5 text-xs sm:text-sm bg-slate-800/90 border border-slate-700/80 rounded-xl text-slate-200 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500 transition-all shadow-inner"
             />
 
@@ -340,6 +345,11 @@ export const Navbar: React.FC<NavbarProps> = ({
                 setIsDropdownOpen(true);
               }}
               onFocus={() => setIsDropdownOpen(true)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && searchResults.length > 0) {
+                  handleSelectItem(searchResults[0]);
+                }
+              }}
               className="w-full pl-8 pr-7 py-1.5 text-xs bg-slate-800 border border-slate-700 rounded-xl text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-500/60 focus:border-cyan-500 shadow-inner"
             />
 
