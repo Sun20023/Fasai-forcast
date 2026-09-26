@@ -14,11 +14,14 @@ import {
   ChevronRight,
   TrendingUp,
   Droplets,
-  Car
+  Car,
+  ArrowUpDown,
+  LocateFixed
 } from 'lucide-react';
 import { FloodedRoad, AiSafeRouteOption, AiRoutePlanResult, AiFloodForecast } from '../types/flood';
 import { 
   POPULAR_ROUTE_PRESETS, 
+  POPULAR_ORIGIN_PRESETS,
   planAiFloodFreeRoute, 
   calculateAiFloodForecasts 
 } from '../services/aiFloodRouter';
@@ -38,11 +41,23 @@ export const AiRoutePlannerModal: React.FC<AiRoutePlannerModalProps> = ({
   userLocation,
   onSelectRouteOnMap
 }) => {
+  // Check if coordinates are in Bangkok / Central plains corridor
+  const isBangkokArea = (lat: number, lng: number) => {
+    return lat >= 13.3 && lat <= 14.3 && lng >= 100.1 && lng <= 101.0;
+  };
+
+  const getInitialOrigin = (): { name: string; coords: [number, number] } => {
+    if (userLocation && isBangkokArea(userLocation.lat, userLocation.lng)) {
+      return { name: 'ตำแหน่ง GPS ของคุณ (กทม.)', coords: [userLocation.lat, userLocation.lng] };
+    }
+    return { name: 'อนุสาวรีย์ชัยสมรภูมิ (ใจกลาง กทม.)', coords: [13.765, 100.538] };
+  };
+
+  const initialOrigin = getInitialOrigin();
+
   // Origin & Destination states
-  const [originName, setOriginName] = useState('พิกัดปัจจุบันของคุณ');
-  const [originCoords, setOriginCoords] = useState<[number, number]>(
-    userLocation ? [userLocation.lat, userLocation.lng] : [13.7563, 100.5018]
-  );
+  const [originName, setOriginName] = useState(initialOrigin.name);
+  const [originCoords, setOriginCoords] = useState<[number, number]>(initialOrigin.coords);
 
   const [destinationName, setDestinationName] = useState('สนามบินดอนเมือง (DMK)');
   const [destinationCoords, setDestinationCoords] = useState<[number, number]>([13.913, 100.604]);
@@ -52,10 +67,11 @@ export const AiRoutePlannerModal: React.FC<AiRoutePlannerModalProps> = ({
   const [selectedRouteId, setSelectedRouteId] = useState<string>('route-ai-safe');
   const [forecasts, setForecasts] = useState<AiFloodForecast[]>([]);
 
-  // Update origin if user GPS arrives
+  // Update origin if user GPS arrives and is in Bangkok area
   useEffect(() => {
-    if (userLocation) {
+    if (userLocation && isBangkokArea(userLocation.lat, userLocation.lng)) {
       setOriginCoords([userLocation.lat, userLocation.lng]);
+      setOriginName('ตำแหน่ง GPS ปัจจุบัน');
     }
   }, [userLocation]);
 
@@ -79,7 +95,7 @@ export const AiRoutePlannerModal: React.FC<AiRoutePlannerModalProps> = ({
       setRoutePlanResult(plan);
       setSelectedRouteId(plan.routes[0]?.id || 'route-ai-safe');
       setIsCalculating(false);
-    }, 450);
+    }, 400);
   };
 
   const handleSelectPresetDest = (preset: typeof POPULAR_ROUTE_PRESETS[0]) => {
@@ -90,6 +106,70 @@ export const AiRoutePlannerModal: React.FC<AiRoutePlannerModalProps> = ({
       const plan = planAiFloodFreeRoute(
         { name: originName, coords: originCoords },
         { name: preset.label, coords: preset.coords },
+        floodedRoads
+      );
+      setRoutePlanResult(plan);
+      setSelectedRouteId(plan.routes[0]?.id || 'route-ai-safe');
+      setIsCalculating(false);
+    }, 300);
+  };
+
+  const handleSelectPresetOrigin = (preset: typeof POPULAR_ORIGIN_PRESETS[0]) => {
+    setOriginName(preset.label);
+    setOriginCoords(preset.coords);
+    setIsCalculating(true);
+    setTimeout(() => {
+      const plan = planAiFloodFreeRoute(
+        { name: preset.label, coords: preset.coords },
+        { name: destinationName, coords: destinationCoords },
+        floodedRoads
+      );
+      setRoutePlanResult(plan);
+      setSelectedRouteId(plan.routes[0]?.id || 'route-ai-safe');
+      setIsCalculating(false);
+    }, 300);
+  };
+
+  const handleFetchCurrentGps = () => {
+    if (!navigator.geolocation) {
+      alert('เบราว์เซอร์ไม่รองรับ GPS');
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const { latitude, longitude } = pos.coords;
+        setOriginName('📍 ตำแหน่ง GPS ของฉัน');
+        setOriginCoords([latitude, longitude]);
+        setIsCalculating(true);
+        setTimeout(() => {
+          const plan = planAiFloodFreeRoute(
+            { name: '📍 ตำแหน่ง GPS ของฉัน', coords: [latitude, longitude] },
+            { name: destinationName, coords: destinationCoords },
+            floodedRoads
+          );
+          setRoutePlanResult(plan);
+          setSelectedRouteId(plan.routes[0]?.id || 'route-ai-safe');
+          setIsCalculating(false);
+        }, 300);
+      },
+      (err) => {
+        alert('ไม่สามารถดึงตำแหน่ง GPS ได้: ' + err.message);
+      }
+    );
+  };
+
+  const handleSwapOriginDest = () => {
+    const tempName = originName;
+    const tempCoords = originCoords;
+    setOriginName(destinationName);
+    setOriginCoords(destinationCoords);
+    setDestinationName(tempName);
+    setDestinationCoords(tempCoords);
+    setIsCalculating(true);
+    setTimeout(() => {
+      const plan = planAiFloodFreeRoute(
+        { name: destinationName, coords: destinationCoords },
+        { name: tempName, coords: tempCoords },
         floodedRoads
       );
       setRoutePlanResult(plan);
@@ -125,7 +205,7 @@ export const AiRoutePlannerModal: React.FC<AiRoutePlannerModalProps> = ({
                 </span>
               </div>
               <p className="text-xs text-slate-400">
-                โมเดลวิเคราะห์มวลน้ำหลาก & นำทางหลบถนนน้ำท่วมขัง ส่งออกเข้า Apple Maps และ Google Maps ได้ทันที
+                โมเดลวิเคราะห์มวลน้ำหลาก & นำทางหลบถนนน้ำท่วมขัง ส่งออกเข้า Apple Maps และ Google Maps ได้ทันที (ไร้จุดแวะอ้อม)
               </p>
             </div>
           </div>
@@ -150,30 +230,62 @@ export const AiRoutePlannerModal: React.FC<AiRoutePlannerModalProps> = ({
                 <Navigation className="w-4 h-4" />
               </div>
               <div className="flex-1">
-                <label className="block text-[10px] uppercase font-bold text-slate-400 tracking-wider">
-                  จุดเริ่มต้น
+                <label className="block text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1">
+                  จุดเริ่มต้น (Origin)
                 </label>
                 <div className="flex items-center gap-2">
                   <input
                     type="text"
                     value={originName}
                     onChange={(e) => setOriginName(e.target.value)}
-                    className="w-full bg-slate-900/90 border border-slate-700 rounded-lg px-2.5 py-1 text-xs sm:text-sm text-white focus:outline-none focus:border-cyan-500"
-                    placeholder="ระบุจุดเริ่มต้น หรือใช้ GPS"
+                    className="w-full bg-slate-900/90 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs sm:text-sm text-white focus:outline-none focus:border-cyan-500"
+                    placeholder="ระบุจุดเริ่มต้น หรือเลือกปุ่มด่วนด้านล่าง"
                   />
-                  {userLocation && (
-                    <button
-                      onClick={() => {
-                        setOriginName('ตำแหน่ง GPS ปัจจุบัน');
-                        setOriginCoords([userLocation.lat, userLocation.lng]);
-                      }}
-                      className="px-2.5 py-1 rounded-lg bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 text-[11px] font-bold shrink-0 hover:bg-cyan-500/30"
-                    >
-                      📍 ใช้ GPS
-                    </button>
-                  )}
+                  <button
+                    onClick={handleFetchCurrentGps}
+                    className="px-2.5 py-1.5 rounded-lg bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 text-[11px] font-bold shrink-0 hover:bg-cyan-500/30 flex items-center gap-1 transition-all"
+                    title="ดึงพิกัดปัจจุบันจาก GPS เครื่องของคุณ"
+                  >
+                    <LocateFixed className="w-3.5 h-3.5" />
+                    <span>ใช้ GPS</span>
+                  </button>
                 </div>
               </div>
+            </div>
+
+            {/* Quick Origin Presets */}
+            <div>
+              <span className="text-[10px] font-semibold text-slate-400 block mb-1">
+                เลือกจุดเริ่มต้นด่วน (กทม.):
+              </span>
+              <div className="flex flex-wrap gap-1.5">
+                {POPULAR_ORIGIN_PRESETS.map((preset) => (
+                  <button
+                    key={preset.label}
+                    onClick={() => handleSelectPresetOrigin(preset)}
+                    className={`px-2.5 py-1 rounded-xl text-[11px] font-medium transition-all ${
+                      originName === preset.label
+                        ? 'bg-cyan-500 text-slate-950 font-bold shadow-md shadow-cyan-500/25'
+                        : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-700/80 border border-slate-700/60'
+                    }`}
+                  >
+                    {preset.label.split('(')[0].trim()}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Swap Button */}
+            <div className="flex items-center justify-center -my-1">
+              <button
+                type="button"
+                onClick={handleSwapOriginDest}
+                className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-700 hover:bg-slate-600 text-cyan-300 text-[11px] font-bold border border-slate-600 shadow-md transition-all active:scale-95"
+                title="สลับจุดเริ่มต้นและจุดหมายปลายทาง"
+              >
+                <ArrowUpDown className="w-3.5 h-3.5" />
+                <span>สลับต้นทาง ↔ ปลายทาง</span>
+              </button>
             </div>
 
             {/* Destination */}
@@ -182,14 +294,14 @@ export const AiRoutePlannerModal: React.FC<AiRoutePlannerModalProps> = ({
                 <MapPin className="w-4 h-4" />
               </div>
               <div className="flex-1">
-                <label className="block text-[10px] uppercase font-bold text-slate-400 tracking-wider">
-                  จุดหมายปลายทาง
+                <label className="block text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1">
+                  จุดหมายปลายทาง (Destination)
                 </label>
                 <input
                   type="text"
                   value={destinationName}
                   onChange={(e) => setDestinationName(e.target.value)}
-                  className="w-full bg-slate-900/90 border border-slate-700 rounded-lg px-2.5 py-1 text-xs sm:text-sm text-white focus:outline-none focus:border-cyan-500"
+                  className="w-full bg-slate-900/90 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs sm:text-sm text-white focus:outline-none focus:border-cyan-500"
                   placeholder="ระบุจุดหมายปลายทาง"
                 />
               </div>
@@ -197,7 +309,7 @@ export const AiRoutePlannerModal: React.FC<AiRoutePlannerModalProps> = ({
 
             {/* Destination Presets */}
             <div>
-              <span className="text-[10px] font-semibold text-slate-400 block mb-1.5">
+              <span className="text-[10px] font-semibold text-slate-400 block mb-1">
                 เลือกจุดหมายยอดนิยมด่วน:
               </span>
               <div className="flex flex-wrap gap-1.5">
@@ -207,7 +319,7 @@ export const AiRoutePlannerModal: React.FC<AiRoutePlannerModalProps> = ({
                     onClick={() => handleSelectPresetDest(preset)}
                     className={`px-2.5 py-1 rounded-xl text-[11px] font-medium transition-all ${
                       destinationName === preset.label
-                        ? 'bg-cyan-500 text-slate-950 font-bold shadow-md shadow-cyan-500/25'
+                        ? 'bg-rose-500 text-white font-bold shadow-md shadow-rose-500/25'
                         : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-700/80 border border-slate-700/60'
                     }`}
                   >

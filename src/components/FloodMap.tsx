@@ -10,7 +10,7 @@ import {
   Sparkles,
   X
 } from 'lucide-react';
-import { WaterStation, DamInfo, RadarData, FloodAlert, FloodZone, FloodedRoad, AiSafeRouteOption } from '../types/flood';
+import { WaterStation, DamInfo, RadarData, FloodAlert, FloodZone, FloodedRoad, AiSafeRouteOption, WatchedArea } from '../types/flood';
 import { buildSingleRoadDetourUrls } from '../services/aiFloodRouter';
 import { FeatureViewMode, FeatureModeSwitcher } from './FeatureModeSwitcher';
 
@@ -78,6 +78,9 @@ interface FloodMapProps {
   tempPinCoords: { lat: number; lng: number } | null;
   featureMode?: FeatureViewMode;
   onSelectFeatureMode?: (mode: FeatureViewMode) => void;
+  watchedAreas?: WatchedArea[];
+  onRemoveWatchedArea?: (id: string) => void;
+  onAddWatchedArea?: (area: { label: string; province: string; lat: number; lng: number }) => void;
 }
 
 export const FloodMap: React.FC<FloodMapProps> = ({
@@ -104,7 +107,10 @@ export const FloodMap: React.FC<FloodMapProps> = ({
   centerCoords,
   tempPinCoords,
   featureMode,
-  onSelectFeatureMode
+  onSelectFeatureMode,
+  watchedAreas = [],
+  onRemoveWatchedArea,
+  onAddWatchedArea
 }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
@@ -113,6 +119,7 @@ export const FloodMap: React.FC<FloodMapProps> = ({
   const markersLayerGroupRef = useRef<L.LayerGroup | null>(null);
   const aiRouteLayerGroupRef = useRef<L.LayerGroup | null>(null);
   const tempPinMarkerRef = useRef<L.Marker | null>(null);
+  const watchedAreasLayerGroupRef = useRef<L.LayerGroup | null>(null);
 
   // Default to 100% Free OpenStreetMap
   const [baseMapType, setBaseMapType] = useState<BaseMapKey>('osm');
@@ -194,6 +201,10 @@ export const FloodMap: React.FC<FloodMapProps> = ({
     const aiRouteGroup = L.layerGroup().addTo(map);
     aiRouteLayerGroupRef.current = aiRouteGroup;
 
+    // Watched Areas (Pinned Locations) layer group
+    const watchedGroup = L.layerGroup().addTo(map);
+    watchedAreasLayerGroupRef.current = watchedGroup;
+
     // Map Click Listener
     map.on('click', (e: L.LeafletMouseEvent) => {
       onMapClickCoordinates({ lat: e.latlng.lat, lng: e.latlng.lng });
@@ -238,6 +249,8 @@ export const FloodMap: React.FC<FloodMapProps> = ({
       baseTileLayerRef.current = null;
       radarTileLayerRef.current = null;
       markersLayerGroupRef.current = null;
+      aiRouteLayerGroupRef.current = null;
+      watchedAreasLayerGroupRef.current = null;
     };
   }, []);
 
@@ -305,7 +318,7 @@ export const FloodMap: React.FC<FloodMapProps> = ({
     );
   }, [centerCoords]);
 
-  // 5. Temporary Click Pin
+  // 5. Temporary Click Pin with Interactive Popup
   useEffect(() => {
     if (!mapInstanceRef.current) return;
 
@@ -318,22 +331,166 @@ export const FloodMap: React.FC<FloodMapProps> = ({
       const pinIcon = L.divIcon({
         className: 'custom-temp-pin',
         html: `
-          <div class="relative flex items-center justify-center">
-            <div class="w-8 h-8 rounded-full bg-cyan-500/30 border-2 border-cyan-400 flex items-center justify-center animate-ping absolute"></div>
-            <div class="w-8 h-8 rounded-full bg-cyan-600 text-white flex items-center justify-center shadow-lg border-2 border-white">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+          <div class="relative flex items-center justify-center cursor-pointer">
+            <div class="w-10 h-10 rounded-full bg-cyan-500/40 border-2 border-cyan-400 flex items-center justify-center animate-ping absolute"></div>
+            <div class="w-9 h-9 rounded-full bg-gradient-to-tr from-cyan-600 via-sky-500 to-blue-600 text-white flex items-center justify-center shadow-2xl border-2 border-white text-base">
+              📍
             </div>
           </div>
         `,
-        iconSize: [32, 32],
-        iconAnchor: [16, 32]
+        iconSize: [36, 36],
+        iconAnchor: [18, 36]
       });
 
       const marker = L.marker([tempPinCoords.lat, tempPinCoords.lng], { icon: pinIcon })
         .addTo(mapInstanceRef.current);
       tempPinMarkerRef.current = marker;
+
+      const popupHtml = `
+        <div class="p-3 min-w-[240px]">
+          <div class="font-bold text-xs text-cyan-300 mb-1 flex items-center gap-1.5">
+            <span>📍 พิกัดที่เลือกบนแผนที่</span>
+          </div>
+          <p class="text-[11px] text-slate-300 mb-2 font-mono bg-slate-800/80 px-2 py-1 rounded-lg border border-slate-700/60">
+            ${tempPinCoords.lat.toFixed(5)}, ${tempPinCoords.lng.toFixed(5)}
+          </p>
+          <div class="space-y-1.5">
+            ${onAddWatchedArea ? `
+              <button id="quick-save-pin" class="w-full py-1.5 px-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-rose-600 hover:from-amber-400 hover:to-rose-500 text-white text-xs font-bold shadow-md flex items-center justify-center gap-1.5 transition-all active:scale-95">
+                <span>📌 ปักหมุดเป็นพื้นที่เฝ้าระวัง</span>
+              </button>
+            ` : ''}
+            ${onOpenAiRoutePlanner ? `
+              <button id="ai-route-here" class="w-full py-1.5 px-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold shadow-md flex items-center justify-center gap-1.5 transition-all active:scale-95">
+                <span>🚗 วางแผนเส้นทางมาที่นี่ (AI)</span>
+              </button>
+            ` : ''}
+            <div class="grid grid-cols-2 gap-1.5 pt-1">
+              <a 
+                href="https://www.google.com/maps/dir/?api=1&destination=${tempPinCoords.lat.toFixed(5)},${tempPinCoords.lng.toFixed(5)}&travelmode=driving" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                class="py-1 px-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[10px] text-center font-bold shadow-sm"
+              >
+                🗺️ Google Maps
+              </a>
+              <a 
+                href="https://maps.apple.com/?daddr=${tempPinCoords.lat.toFixed(5)},${tempPinCoords.lng.toFixed(5)}&dirflg=d" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                class="py-1 px-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-white text-[10px] text-center font-bold border border-slate-600 shadow-sm"
+              >
+                🍏 Apple Maps
+              </a>
+            </div>
+          </div>
+        </div>
+      `;
+
+      marker.bindPopup(popupHtml, { maxWidth: 280 });
+      marker.openPopup();
+
+      marker.on('popupopen', () => {
+        const saveBtn = document.getElementById('quick-save-pin');
+        if (saveBtn && onAddWatchedArea) {
+          saveBtn.onclick = () => {
+            onAddWatchedArea({
+              label: `หมุด (${tempPinCoords.lat.toFixed(3)}, ${tempPinCoords.lng.toFixed(3)})`,
+              province: 'พื้นที่เลือก',
+              lat: tempPinCoords.lat,
+              lng: tempPinCoords.lng
+            });
+            marker.closePopup();
+          };
+        }
+
+        const routeBtn = document.getElementById('ai-route-here');
+        if (routeBtn && onOpenAiRoutePlanner) {
+          routeBtn.onclick = () => {
+            onOpenAiRoutePlanner();
+          };
+        }
+      });
     }
-  }, [tempPinCoords]);
+  }, [tempPinCoords, onAddWatchedArea, onOpenAiRoutePlanner]);
+
+  // 5.2 Render Watched Areas (Pinned Locations on Map)
+  useEffect(() => {
+    if (!mapInstanceRef.current || !watchedAreasLayerGroupRef.current) return;
+    const group = watchedAreasLayerGroupRef.current;
+    group.clearLayers();
+
+    if (!watchedAreas || watchedAreas.length === 0) return;
+
+    watchedAreas.forEach((area) => {
+      const pinIcon = L.divIcon({
+        className: 'custom-watched-pin',
+        html: `
+          <div class="flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r from-amber-500 via-orange-500 to-rose-600 text-white font-bold text-xs shadow-2xl border-2 border-white cursor-pointer hover:scale-110 active:scale-95 transition-all">
+            <span class="text-sm">📌</span>
+            <span class="max-w-[130px] truncate text-[11px] font-black">${area.label}</span>
+          </div>
+        `,
+        iconSize: [140, 28],
+        iconAnchor: [70, 14]
+      });
+
+      const marker = L.marker([area.lat, area.lng], { icon: pinIcon });
+
+      const popupHtml = `
+        <div class="p-3 min-w-[250px]">
+          <div class="flex items-center justify-between mb-1.5 border-b border-slate-700/80 pb-1.5">
+            <span class="font-bold text-sm text-amber-300 flex items-center gap-1">📌 ${area.label}</span>
+            <span class="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-semibold border border-amber-500/30">พื้นที่เฝ้าระวัง</span>
+          </div>
+          <p class="text-xs text-slate-300 mb-2">จ.${area.province} (${area.lat.toFixed(4)}, ${area.lng.toFixed(4)})</p>
+
+          <div class="grid grid-cols-2 gap-1.5 mb-2.5">
+            <a 
+              href="https://www.google.com/maps/dir/?api=1&destination=${area.lat.toFixed(5)},${area.lng.toFixed(5)}&travelmode=driving" 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              class="py-1 px-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[10px] text-center font-bold shadow-sm"
+            >
+              🗺️ Google Maps
+            </a>
+            <a 
+              href="https://maps.apple.com/?daddr=${area.lat.toFixed(5)},${area.lng.toFixed(5)}&dirflg=d" 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              class="py-1 px-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-white text-[10px] text-center font-bold border border-slate-600 shadow-sm"
+            >
+              🍏 Apple Maps
+            </a>
+          </div>
+
+          <div class="flex items-center gap-1.5">
+            <button id="inspect-pin-${area.id}" class="flex-1 py-1.5 px-2 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold shadow-sm transition-all">🔍 วิเคราะห์สภาพอากาศสด</button>
+            ${onRemoveWatchedArea ? `<button id="del-pin-${area.id}" class="py-1.5 px-2.5 rounded-lg bg-rose-600/30 hover:bg-rose-600 text-rose-300 hover:text-white text-xs font-bold transition-all" title="ลบหมุดนี้">🗑️</button>` : ''}
+          </div>
+        </div>
+      `;
+
+      marker.bindPopup(popupHtml, { maxWidth: 300 });
+
+      marker.on('popupopen', () => {
+        const inspectBtn = document.getElementById(`inspect-pin-${area.id}`);
+        if (inspectBtn) {
+          inspectBtn.onclick = () => {
+            onMapClickCoordinates({ lat: area.lat, lng: area.lng });
+          };
+        }
+        const delBtn = document.getElementById(`del-pin-${area.id}`);
+        if (delBtn && onRemoveWatchedArea) {
+          delBtn.onclick = () => {
+            onRemoveWatchedArea(area.id);
+          };
+        }
+      });
+
+      group.addLayer(marker);
+    });
+  }, [watchedAreas, onRemoveWatchedArea, onMapClickCoordinates]);
 
   // 5.5 Render Active AI Safe Route Polyline & Waypoints
   useEffect(() => {
@@ -1067,7 +1224,7 @@ export const FloodMap: React.FC<FloodMapProps> = ({
 
       {/* Top Floating Feature / Layer Mode Selector (Clean Viewport) */}
       {onSelectFeatureMode && featureMode && (
-        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-[1000] max-w-[95vw]">
+        <div className="absolute top-14 sm:top-3 left-1/2 -translate-x-1/2 z-[1000] max-w-[96vw]">
           <FeatureModeSwitcher
             currentMode={featureMode}
             onSelectMode={onSelectFeatureMode}

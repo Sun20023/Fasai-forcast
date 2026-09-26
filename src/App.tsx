@@ -324,8 +324,17 @@ export const App: React.FC = () => {
   };
 
   const handleSelectWatchArea = (area: WatchedArea) => {
-    setCenterCoords({ lat: area.lat, lng: area.lng, zoom: 11 });
-    handleMapClick({ lat: area.lat, lng: area.lng });
+    setCenterCoords({ lat: area.lat, lng: area.lng, zoom: 14 });
+    setTempPinCoords({ lat: area.lat, lng: area.lng });
+    setSelectedStation(null);
+    setSelectedDam(null);
+    setCustomLocation({
+      lat: area.lat,
+      lng: area.lng,
+      name: area.label
+    });
+    fetchDeepTelemetry(area.lat, area.lng);
+    showToast('📌 โฟกัสพื้นที่เฝ้าระวัง', `กำลังดึงสภาพอากาศและระดับน้ำที่ ${area.label}`, 'info');
   };
 
   // Refresh All Data
@@ -435,6 +444,9 @@ export const App: React.FC = () => {
           onOpenAiRoutePlanner={() => setIsAiRouteModalOpen(true)}
           featureMode={featureMode}
           onSelectFeatureMode={handleSelectFeatureMode}
+          watchedAreas={watchedAreas}
+          onRemoveWatchedArea={handleRemoveWatchArea}
+          onAddWatchedArea={handleAddWatchArea}
         />
 
         {/* Floating Color Risk Zone Legend & Filter (Visible in 'zones' or 'all' mode) */}
@@ -530,9 +542,17 @@ export const App: React.FC = () => {
           const updated = [area, ...watchedAreas];
           setWatchedAreas(updated);
           saveWatchedAreas(updated);
+          showToast('📌 บันทึกพื้นที่เฝ้าระวังแล้ว', `เพิ่ม ${area.label} ลงในรายการเฝ้าระวังของคุณเรียบร้อย`, 'info');
         }}
         onRemoveArea={handleRemoveWatchArea}
         onSelectArea={handleSelectWatchArea}
+        currentCoords={
+          customLocation 
+            ? { lat: customLocation.lat, lng: customLocation.lng, name: customLocation.name } 
+            : tempPinCoords 
+            ? { lat: tempPinCoords.lat, lng: tempPinCoords.lng, name: 'พิกัดที่เลือกบนแผนที่' }
+            : null
+        }
       />
 
       <EmergencyModal

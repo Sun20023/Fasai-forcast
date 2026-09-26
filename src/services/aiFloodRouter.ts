@@ -94,25 +94,13 @@ export function buildAppleMapsUrl(
   return `https://maps.apple.com/?saddr=${oStr}&daddr=${dStr}&dirflg=d`;
 }
 
-/**
- * Build 1-click detour navigation for an individual flooded road
- */
 export function buildSingleRoadDetourUrls(road: FloodedRoad): { googleMapsUrl: string; appleMapsUrl: string } {
   // Use first coordinate and last coordinate as detour origin and destination
   const first = road.coordinates[0];
   const last = road.coordinates[road.coordinates.length - 1];
-  
-  // Calculate perpendicular safe bypass waypoint ~1.5km away
-  const center = road.center;
-  const dLat = last[0] - first[0];
-  const dLng = last[1] - first[1];
-  const bypassWaypoint: [number, number] = [
-    center[0] - dLng * 0.4,
-    center[1] + dLat * 0.4
-  ];
 
   return {
-    googleMapsUrl: buildGoogleMapsUrl(first, last, [bypassWaypoint]),
+    googleMapsUrl: buildGoogleMapsUrl(first, last),
     appleMapsUrl: buildAppleMapsUrl(first, last)
   };
 }
@@ -131,6 +119,15 @@ export const POPULAR_ROUTE_PRESETS: { label: string; coords: [number, number]; d
   { label: 'เดอะมอลล์บางกะปิ / แยกลำสาลี', coords: [13.766, 100.643], desc: 'ถนนลาดพร้าว บางกะปิ' },
   { label: 'สายใต้ใหม่ (บรมราชชนนี)', coords: [13.780, 100.422], desc: 'สถานีขนส่งสายใต้ใหม่ ตลิ่งชัน' },
   { label: 'อนุสาวรีย์ชัยสมรภูมิ', coords: [13.765, 100.538], desc: 'พญาไท กทม.' }
+];
+
+export const POPULAR_ORIGIN_PRESETS: { label: string; coords: [number, number]; desc: string }[] = [
+  { label: 'อนุสาวรีย์ชัยสมรภูมิ', coords: [13.765, 100.538], desc: 'ใจกลาง กทม.' },
+  { label: 'สยามสแควร์ / ปทุมวัน', coords: [13.746, 100.535], desc: 'ปทุมวัน กทม.' },
+  { label: 'ห้าแยกลาดพร้าว', coords: [13.816, 100.561], desc: 'จตุจักร / ลาดพร้าว' },
+  { label: 'สถานีกลางบางซื่อ', coords: [13.804, 100.540], desc: 'กรุงเทพอภิวัฒน์' },
+  { label: 'ฟิวเจอร์พาร์ครังสิต', coords: [13.989, 100.617], desc: 'รังสิต ปทุมธานี' },
+  { label: 'สี่แยกบางนา', coords: [13.668, 100.605], desc: 'บางนา-ตราด' }
 ];
 
 /**
@@ -168,8 +165,8 @@ export function planAiFloodFreeRoute(
   const criticalRoadsInCorridor = roadsInCorridor.filter(r => r.status === 'critical');
 
   // Compute Safe Waypoints (Detour Corridor avoiding critical road center points)
-  const safeDetourOffsetLat = dLat > oLat ? 0.025 : -0.025;
-  const safeDetourOffsetLng = dLng > oLng ? -0.035 : 0.035;
+  const safeDetourOffsetLat = dLat > oLat ? 0.005 : -0.005;
+  const safeDetourOffsetLng = dLng > oLng ? -0.008 : 0.008;
 
   const midLat = (oLat + dLat) / 2;
   const midLng = (oLng + dLng) / 2;
@@ -194,8 +191,8 @@ export function planAiFloodFreeRoute(
     destination.coords
   ];
 
-  const safeDistanceKm = parseFloat((directDistanceKm * 1.28).toFixed(1));
-  const safeTimeMin = Math.round(safeDistanceKm * 2.2);
+  const safeDistanceKm = parseFloat((directDistanceKm * 1.12).toFixed(1));
+  const safeTimeMin = Math.round(safeDistanceKm * 2.0);
 
   const safeRoute: AiSafeRouteOption = {
     id: 'route-ai-safe',
@@ -217,22 +214,22 @@ export function planAiFloodFreeRoute(
       `เข้าสู่ ${destination.name} อย่างปลอดภัยไร้น้ำท่วม`
     ],
     coordinates: safeRouteCoords,
-    googleMapsUrl: buildGoogleMapsUrl(origin.coords, destination.coords, [safeWaypoint1, safeWaypoint2]),
+    googleMapsUrl: buildGoogleMapsUrl(origin.coords, destination.coords),
     appleMapsUrl: buildAppleMapsUrl(origin.coords, destination.coords)
   };
 
   // 2. Expressway / Elevated Route (ทางด่วนพิเศษ ยกระดับ)
   const tollwayWaypoint: [number, number] = [
-    midLat + 0.015,
-    midLng - 0.02
+    midLat + 0.006,
+    midLng - 0.008
   ];
   const tollwayRouteCoords: [number, number][] = [
     origin.coords,
     tollwayWaypoint,
     destination.coords
   ];
-  const tollwayDistanceKm = parseFloat((directDistanceKm * 1.15).toFixed(1));
-  const tollwayTimeMin = Math.round(tollwayDistanceKm * 1.6);
+  const tollwayDistanceKm = parseFloat((directDistanceKm * 1.08).toFixed(1));
+  const tollwayTimeMin = Math.round(tollwayDistanceKm * 1.5);
 
   const tollwayRoute: AiSafeRouteOption = {
     id: 'route-ai-tollway',
@@ -251,7 +248,7 @@ export function planAiFloodFreeRoute(
       'ลงด่านปลายทางเข้าสู่เป้าหมาย'
     ],
     coordinates: tollwayRouteCoords,
-    googleMapsUrl: buildGoogleMapsUrl(origin.coords, destination.coords, [tollwayWaypoint]),
+    googleMapsUrl: buildGoogleMapsUrl(origin.coords, destination.coords),
     appleMapsUrl: buildAppleMapsUrl(origin.coords, destination.coords)
   };
 
