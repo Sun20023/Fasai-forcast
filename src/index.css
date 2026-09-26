@@ -121,3 +121,26 @@ html, body, #root {
 .pulse-warning {
   animation: warningPulse 2.2s infinite;
 }
+
+/* Flooded Roads Polyline Styling */
+@keyframes flowDash {
+  to {
+    stroke-dashoffset: -28;
+  }
+}
+
+.road-flood-line-critical {
+  stroke-dasharray: 8 6;
+  animation: flowDash 1.2s linear infinite;
+  filter: drop-shadow(0 0 6px rgba(239, 68, 68, 0.9));
+}
+
+.road-flood-line-warning {
+  stroke-dasharray: 6 5;
+  animation: flowDash 1.8s linear infinite;
+  filter: drop-shadow(0 0 5px rgba(249, 115, 22, 0.8));
+}
+
+.road-glow-critical {
+  filter: blur(1.5px);
+}

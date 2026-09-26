@@ -1,5 +1,6 @@
 import { THAILAND_PROVINCES, INITIAL_STATIONS, INITIAL_DAMS } from '../data/mockStations';
 import { FLOOD_COLOR_ZONES } from '../data/floodZones';
+import { FLOODED_ROADS_DATA } from '../data/floodedRoads';
 
 export interface SearchResultItem {
   id: string;
@@ -8,7 +9,7 @@ export interface SearchResultItem {
   lat: number;
   lng: number;
   zoom: number;
-  category: 'subdistrict' | 'district' | 'province' | 'station' | 'dam' | 'zone' | 'place';
+  category: 'subdistrict' | 'district' | 'province' | 'station' | 'dam' | 'zone' | 'place' | 'road';
   categoryLabel: string;
   color: string;
 }
@@ -19,7 +20,31 @@ export async function searchLocations(query: string): Promise<SearchResultItem[]
 
   const results: SearchResultItem[] = [];
 
-  // 1. Local Search: Stations
+  // 1. Local Search: Flooded Roads
+  FLOODED_ROADS_DATA.forEach(road => {
+    if (
+      road.name.toLowerCase().includes(q) ||
+      (road.routeNumber && road.routeNumber.toLowerCase().includes(q)) ||
+      road.province.toLowerCase().includes(q) ||
+      road.district.toLowerCase().includes(q) ||
+      (road.subdistrict && road.subdistrict.toLowerCase().includes(q))
+    ) {
+      const isCritical = road.status === 'critical';
+      results.push({
+        id: `road-${road.id}`,
+        title: road.name,
+        subtitle: `จ.${road.province} • ${road.waterDepth} (${road.passabilityText})`,
+        lat: road.center[0],
+        lng: road.center[1],
+        zoom: 14,
+        category: 'road',
+        categoryLabel: isCritical ? '⛔ ถนนน้ำท่วม' : '🛣️ ทางน้ำขัง',
+        color: isCritical ? 'bg-rose-500/20 text-rose-300 border-rose-500/30' : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+      });
+    }
+  });
+
+  // 2. Local Search: Stations
   INITIAL_STATIONS.forEach(st => {
     if (
       st.name.toLowerCase().includes(q) ||

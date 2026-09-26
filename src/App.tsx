@@ -26,6 +26,7 @@ import {
   THAILAND_PROVINCES 
 } from './data/mockStations';
 import { FLOOD_COLOR_ZONES } from './data/floodZones';
+import { FLOODED_ROADS_DATA } from './data/floodedRoads';
 import { 
   fetchLiveWeather, 
   fetchRiverDischarge, 
@@ -368,6 +369,7 @@ export const App: React.FC = () => {
           dams={dams}
           alerts={alerts}
           floodZones={FLOOD_COLOR_ZONES}
+          floodedRoads={FLOODED_ROADS_DATA}
           activeZoneFilter={activeZoneFilter}
           onSelectZone={handleSelectZone}
           radarData={radarData}

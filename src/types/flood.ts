@@ -116,3 +116,21 @@ export interface FloodZone {
   coordinates: [number, number][];
   center: [number, number];
 }
+
+export interface FloodedRoad {
+  id: string;
+  name: string;
+  routeNumber?: string;
+  province: string;
+  district: string;
+  subdistrict?: string;
+  status: 'critical' | 'warning' | 'passable'; // critical = แดง (น้ำขังสูง/ห้ามผ่าน), warning = ส้ม (รถเล็กห้ามผ่าน), passable = เขียว (ผ่านได้)
+  waterDepth: string; // เช่น "น้ำท่วมขัง 35-50 ซม."
+  passability: 'impassable' | 'small_vehicle_prohibited' | 'passable_with_caution';
+  passabilityText: string; // เช่น "ปิดการจราจร / รถทุกชนิดห้ามผ่าน" หรือ "รถเล็กไม่ควรผ่าน"
+  reportedTime: string;
+  cause: string;
+  detourAdvice: string;
+  coordinates: [number, number][]; // พิกัดเส้นทางถนน
+  center: [number, number]; // จุดศูนย์กลางสำหรับปักหมุด/ซูม
+}

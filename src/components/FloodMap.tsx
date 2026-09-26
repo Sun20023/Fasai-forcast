@@ -8,7 +8,7 @@ import {
   ZoomOut,
   ShieldAlert
 } from 'lucide-react';
-import { WaterStation, DamInfo, RadarData, FloodAlert, FloodZone } from '../types/flood';
+import { WaterStation, DamInfo, RadarData, FloodAlert, FloodZone, FloodedRoad } from '../types/flood';
 
 // Fix Leaflet default marker icon asset paths safeguard
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -54,6 +54,7 @@ interface FloodMapProps {
   dams: DamInfo[];
   alerts: FloodAlert[];
   floodZones: FloodZone[];
+  floodedRoads?: FloodedRoad[];
   activeZoneFilter: 'all' | 'red' | 'orange' | 'yellow' | 'green';
   onSelectZone: (zone: FloodZone) => void;
   radarData: RadarData | null;
@@ -73,6 +74,7 @@ export const FloodMap: React.FC<FloodMapProps> = ({
   dams,
   alerts,
   floodZones,
+  floodedRoads = [],
   activeZoneFilter,
   onSelectZone,
   radarData,
@@ -98,6 +100,7 @@ export const FloodMap: React.FC<FloodMapProps> = ({
   const [showStations, setShowStations] = useState(true);
   const [showDams, setShowDams] = useState(true);
   const [showRiskZones, setShowRiskZones] = useState(true);
+  const [showFloodedRoads, setShowFloodedRoads] = useState(true);
   const [showLayerMenu, setShowLayerMenu] = useState(false);
 
   // 1. Initialize Map Safely
@@ -557,7 +560,148 @@ export const FloodMap: React.FC<FloodMapProps> = ({
       });
     }
 
-  }, [stations, dams, floodZones, showStations, showDams, showRiskZones, activeZoneFilter]);
+    // 6.4 Flooded Roads (Red / Orange Polylines with water depth badges)
+    if (showFloodedRoads && floodedRoads && floodedRoads.length > 0) {
+      floodedRoads.forEach((road) => {
+        const isCritical = road.status === 'critical';
+        const isWarning = road.status === 'warning';
+
+        // Outer glow color & inner core color
+        const glowColor = isCritical ? '#ef4444' : isWarning ? '#f97316' : '#10b981';
+        const coreColor = isCritical ? '#ff2a2a' : isWarning ? '#fb923c' : '#34d399';
+
+        // 1. Outer Glow Polyline
+        const glowPolyline = L.polyline(road.coordinates, {
+          color: glowColor,
+          weight: isCritical ? 10 : 8,
+          opacity: 0.45,
+          className: 'road-glow-critical',
+          lineCap: 'round',
+          lineJoin: 'round'
+        });
+
+        // 2. Foreground Animated / Dashed Polyline
+        const corePolyline = L.polyline(road.coordinates, {
+          color: coreColor,
+          weight: isCritical ? 5 : 4,
+          opacity: 0.95,
+          className: isCritical ? 'road-flood-line-critical' : isWarning ? 'road-flood-line-warning' : '',
+          lineCap: 'round',
+          lineJoin: 'round'
+        });
+
+        // Hover Tooltip
+        const tooltipHtml = `
+          <div class="font-bold text-xs ${isCritical ? 'text-red-400' : isWarning ? 'text-orange-400' : 'text-emerald-400'}">
+            ${isCritical ? '⛔ เส้นทางน้ำท่วม:' : isWarning ? '⚠️ ระวังน้ำขัง:' : '✅ ทางสัญจร:'} ${road.name}
+          </div>
+          <div class="text-[11px] text-slate-300 font-semibold">${road.waterDepth} • ${road.passabilityText}</div>
+        `;
+
+        corePolyline.bindTooltip(tooltipHtml, { sticky: true, opacity: 0.95 });
+        glowPolyline.bindTooltip(tooltipHtml, { sticky: true, opacity: 0.95 });
+
+        // Click Popup
+        const popupHtml = `
+          <div class="p-2.5 min-w-[270px]">
+            <div class="flex items-center justify-between gap-1.5 mb-1.5">
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                isCritical 
+                  ? 'bg-red-500/20 text-red-400 border border-red-500/30' 
+                  : isWarning 
+                  ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30'
+                  : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+              }">
+                ${isCritical ? '🔴 น้ำท่วมขังวิกฤต' : isWarning ? '🟠 น้ำท่วมขังรอระบาย' : '🟢 สัญจรได้ปกติ'}
+              </span>
+              <span class="text-xs font-semibold text-slate-300">จ.${road.province}</span>
+            </div>
+            
+            <h4 class="font-bold text-sm text-white mb-1 leading-snug">${road.name}</h4>
+            <div class="text-xs font-bold text-amber-300 mb-2 flex items-center gap-1">
+              <span>🌊 ${road.waterDepth}</span>
+              <span class="text-slate-400 text-[10px] font-normal">(${road.reportedTime})</span>
+            </div>
+
+            <div class="bg-slate-800/80 p-2 rounded-xl text-[11px] space-y-1 mb-2.5 border border-slate-700/60">
+              <div class="flex justify-between">
+                <span class="text-slate-400">สถานะจราจร:</span>
+                <strong class="${isCritical ? 'text-red-400' : 'text-slate-200'}">${road.passabilityText}</strong>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-slate-400">สาเหตุ:</span>
+                <span class="text-slate-200 text-right max-w-[170px] truncate">${road.cause}</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-slate-400">พื้นที่:</span>
+                <span class="text-slate-200">อ.${road.district} ${road.subdistrict ? `ต.${road.subdistrict}` : ''}</span>
+              </div>
+            </div>
+
+            <div class="bg-rose-950/40 p-2 rounded-xl border border-rose-500/30 text-[10px] text-rose-200 mb-2.5">
+              <strong>ทางเลี่ยงแนะนำ:</strong> ${road.detourAdvice}
+            </div>
+
+            <button id="inspect-road-${road.id}" class="w-full py-1.5 px-3 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white rounded-lg text-xs font-bold transition-all shadow-md">
+              🔍 ตรวจสอบสภาพอากาศพิกัดถนนนี้
+            </button>
+          </div>
+        `;
+
+        corePolyline.bindPopup(popupHtml, { maxWidth: 320 });
+        glowPolyline.bindPopup(popupHtml, { maxWidth: 320 });
+
+        const bindRoadEvent = (layer: L.Polyline) => {
+          layer.on('popupopen', () => {
+            const btn = document.getElementById(`inspect-road-${road.id}`);
+            if (btn) {
+              btn.onclick = () => {
+                onMapClickCoordinates({ lat: road.center[0], lng: road.center[1] });
+              };
+            }
+          });
+        };
+
+        bindRoadEvent(corePolyline);
+        bindRoadEvent(glowPolyline);
+
+        group.addLayer(glowPolyline);
+        group.addLayer(corePolyline);
+
+        // Center badge pin for clear identification even when zoomed out
+        const depthShort = road.waterDepth.replace('น้ำท่วมขัง', '').trim();
+        const badgeIcon = L.divIcon({
+          className: 'road-center-badge',
+          html: `
+            <div class="flex items-center gap-1 px-2 py-0.5 rounded-full ${
+              isCritical
+                ? 'bg-red-600 text-white border border-red-300 pulse-critical shadow-lg shadow-red-600/50'
+                : 'bg-orange-500 text-slate-950 border border-orange-200 shadow-md'
+            } text-[10px] font-bold whitespace-nowrap cursor-pointer hover:scale-110 transition-transform">
+              <span>⛔</span>
+              <span>${road.routeNumber || 'น้ำขัง'} ${depthShort}</span>
+            </div>
+          `,
+          iconSize: [110, 20],
+          iconAnchor: [55, 10]
+        });
+
+        const badgeMarker = L.marker(road.center, { icon: badgeIcon });
+        badgeMarker.bindPopup(popupHtml, { maxWidth: 320 });
+        badgeMarker.on('popupopen', () => {
+          const btn = document.getElementById(`inspect-road-${road.id}`);
+          if (btn) {
+            btn.onclick = () => {
+              onMapClickCoordinates({ lat: road.center[0], lng: road.center[1] });
+            };
+          }
+        });
+
+        group.addLayer(badgeMarker);
+      });
+    }
+
+  }, [stations, dams, floodZones, floodedRoads, showStations, showDams, showRiskZones, showFloodedRoads, activeZoneFilter]);
 
   // Zoom helpers
   const handleZoomIn = () => mapInstanceRef.current?.zoomIn();
@@ -664,6 +808,16 @@ export const FloodMap: React.FC<FloodMapProps> = ({
               </p>
 
               <div className="space-y-2">
+                <label className="flex items-center gap-2 cursor-pointer hover:text-rose-300">
+                  <input
+                    type="checkbox"
+                    checked={showFloodedRoads}
+                    onChange={(e) => setShowFloodedRoads(e.target.checked)}
+                    className="rounded bg-slate-800 border-slate-600 text-rose-500 focus:ring-rose-500"
+                  />
+                  <span>🛣️ เส้นทางน้ำท่วมขัง ({floodedRoads.length})</span>
+                </label>
+
                 <label className="flex items-center gap-2 cursor-pointer hover:text-red-300">
                   <input
                     type="checkbox"
